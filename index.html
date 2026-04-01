@@ -1671,19 +1671,32 @@ B.delPostit=async function(id){
 
 B.openDriveEdit=function(projId){
   const current=(S.driveLinks||{})[projId]||'';
-  // Store projId in a hidden input to avoid quote conflicts in onclick attrs
-  showModal('<div class="modal-ov" onclick="if(event.target===this)B.closeModal()">'
+  // projId stored in hidden input — avoids quote conflicts in onclick attributes
+  showModal(
+    '<div class="modal-ov" onclick="if(event.target===this)B.closeModal()">'
     +'<div class="modal"><div class="modal-drag"></div><h3>Pasta do projeto no Google Drive</h3>'
     +'<input type="hidden" id="drv-proj" value="'+esc(projId)+'">'
     +'<div class="mf"><label class="ml" for="drv-url">Link da pasta</label>'
     +'<input class="mi" id="drv-url" type="url" placeholder="https://drive.google.com/..." value="'+esc(current)+'"/></div>'
     +'<div style="font-size:11px;color:var(--tx3);margin-top:-6px;margin-bottom:12px">Cole o link de compartilhamento da pasta do Drive.</div>'
-    +(current?'<div class="mf"><button class="mc" style="color:var(--urg);border-color:var(--urgb)" onclick="B.saveDriveLink(document.getElementById('drv-proj').value,'')">Remover link</button></div>':'')
+    +(current?'<div class="mf"><button class="mc" style="color:var(--urg);border-color:var(--urgb)" onclick="B._driveRemove()">Remover link</button></div>':'')
     +'<div class="merr" id="drv-e"></div>'
     +'<div class="ma"><button class="mc" onclick="B.closeModal()">Cancelar</button>'
-    +'<button class="mok" style="background:var(--n)" onclick="B.saveDriveLink(document.getElementById('drv-proj').value,document.getElementById('drv-url').value)">Salvar</button>'
-    +'</div></div></div>');
+    +'<button class="mok" style="background:var(--n)" onclick="B._driveSave()">Salvar</button>'
+    +'</div></div></div>'
+  );
   setTimeout(function(){var e=document.getElementById('drv-url');if(e)e.focus();},80);
+};
+
+// Helper wrappers — read projId from hidden input, no dynamic onclick needed
+B._driveSave=function(){
+  const proj=document.getElementById('drv-proj').value;
+  const url=document.getElementById('drv-url').value;
+  B.saveDriveLink(proj,url);
+};
+B._driveRemove=function(){
+  const proj=document.getElementById('drv-proj').value;
+  B.saveDriveLink(proj,'');
 };
 
 B.saveDriveLink=async function(projId,url){
