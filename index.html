@@ -682,8 +682,17 @@ function getNearestMilestone(projId){
 function render(){
   const el=document.getElementById('app');
   if(!el||!S)return;
-  el.innerHTML=buildHTML();
-  attachEv();
+  try{
+    el.innerHTML=buildHTML();
+    attachEv();
+  }catch(err){
+    console.error('BRUX render error:',err);
+    // Fallback: show error inside app without blanking the page
+    el.innerHTML='<div style="padding:32px;font-family:DM Sans,sans-serif;color:#A32D2D;font-size:13px;">'
+      +'<strong>Erro ao renderizar:</strong> '+err.message
+      +'<br><br><button onclick="location.reload()" style="margin-top:8px;padding:8px 16px;border-radius:8px;border:1px solid #A32D2D;background:transparent;color:#A32D2D;cursor:pointer;font-family:inherit">↺ Recarregar</button>'
+      +'</div>';
+  }
 }
 
 function buildHTML(){
@@ -1191,7 +1200,7 @@ function buildTimeline(allMs){
       startDate:r.start,endDate:r.end,done:!!t.done,milestone:false});
   });
   // Milestones — always type milestone
-  allMs.forEach(function(m){
+  (allMs||[]).forEach(function(m){
     if(!m.proj||!validIds.has(m.proj))return;
     events.push({id:'ms-'+m.id,projectId:m.proj,title:m.label,type:'milestone',
       startDate:m.date,endDate:m.date,done:false,milestone:true});
@@ -1269,18 +1278,18 @@ function buildTimeline(allMs){
       if(e.type==='milestone'){
         var lp=pct(e.startDate);
         var showLabel=(lp-lastLabelRight)>8;
-        var shortTitle=e.title.length>18?e.title.slice(0,16)+'…':e.title;
+        var shortTitle=(e.title||'').length>18?(e.title||'').slice(0,16)+'…':(e.title||'');
         var label=showLabel?'<div class="gantt-label" style="left:'+lp+'%;color:'+proj.color+';transform:translateX(-50%)">'+esc(shortTitle)+'</div>':'';
         if(showLabel)lastLabelRight=lp+9;
-        return'<div class="gantt-diamond'+doneClass+'" style="left:'+lp+'%;background:'+proj.color+'" title="'+esc(e.title)+'"></div>'+label;
+        return'<div class="gantt-diamond'+doneClass+'" style="left:'+lp+'%;background:'+proj.color+'" title="'+esc(e.title||'')+'"></div>'+label;
       } else {
         var lp2=pct(e.startDate);
         var wp=pctW(e.startDate,e.endDate);
-        var shortTitle2=e.title.length>20?e.title.slice(0,18)+'…':e.title;
+        var shortTitle2=(e.title||'').length>20?(e.title||'').slice(0,18)+'…':(e.title||'');
         var showLabel2=(lp2-lastLabelRight)>6;
         var label2=showLabel2?'<div class="gantt-label" style="left:'+lp2+'%;color:'+proj.color+'">'+esc(shortTitle2)+'</div>':'';
         if(showLabel2)lastLabelRight=lp2+wp+1;
-        return'<div class="gantt-bar'+doneClass+'" style="left:'+lp2+'%;width:'+wp+'%;background:'+proj.color+(isDone?';opacity:.3':'')+'" title="'+esc(e.title)+'"></div>'+label2;
+        return'<div class="gantt-bar'+doneClass+'" style="left:'+lp2+'%;width:'+wp+'%;background:'+proj.color+(isDone?';opacity:.3':'')+'" title="'+esc(e.title||'')+'"></div>'+label2;
       }
     }).join('');
 
