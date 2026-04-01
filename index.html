@@ -961,11 +961,16 @@ function buildPropsCard(props){
 
 // buildAlerts: milestone alerts (auto, read-only) + editable user alerts
 function buildAlerts(proj,allMs){
-  // Milestones shown via buildMsCard above — only user-editable alerts here
+  // Only user-editable alerts (milestones shown via buildMsCard)
   const stored=(S.projectAlerts||{})[proj];
-  const userAlerts=stored&&stored.length?stored:(DA[proj]||[]);
-  const rows=userAlerts.map(function(a,i){
-    return'<div class="alert '+a.type+'">'      +'<textarea class="alert-inp" rows="1" oninput="ar(this)"'      +' onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();this.blur();}"\''      +' onblur="B.saveAlert(\''+proj+'\','+i+',this.value)">'+esc(a.text)+'</textarea>'      +'<button class="alert-x" onclick="B.delAlert(\''+proj+'\','+i+')">✕</button></div>';
+  const alerts=stored&&stored.length?stored:(DA[proj]||[]);
+  const rows=alerts.map(function(a,i){
+    return'<div class="alert '+a.type+'">'
+      +'<textarea class="alert-inp" rows="1" oninput="ar(this)"'
+      +' onblur="B.saveAlert(\''+proj+'\','+i+',this.value)">'
+      +esc(a.text)+'</textarea>'
+      +'<button class="alert-x" onclick="B.delAlert(\''+proj+'\','+i+')">✕</button>'
+      +'</div>';
   }).join('');
   return rows+'<button class="add-alert" onclick="B.addAlert(\''+proj+'\')">+ alerta</button>';
 }
