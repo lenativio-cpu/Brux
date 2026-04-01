@@ -416,6 +416,22 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--tx);min-h
 .gantt-today-line{position:absolute;top:0;bottom:0;width:1.5px;background:var(--urg);z-index:10;pointer-events:none;}
 .gantt-today-tip{position:absolute;top:-16px;left:50%;transform:translateX(-50%);font-size:9px;color:var(--urg);font-weight:700;white-space:nowrap;}
 .gantt-empty{text-align:center;padding:40px;color:var(--tx3);font-size:13px;}
+
+/* milestone highlight card */
+.ms-next-card{border-radius:var(--rads);padding:14px 18px;margin-bottom:16px;
+  display:flex;align-items:center;gap:14px;border:0.5px solid;}
+.ms-next-card.n{background:var(--nl);border-color:var(--nb);}
+.ms-next-card.r{background:var(--rl);border-color:var(--rb);}
+.ms-next-card.custom{background:var(--surf);}
+.ms-next-icon{font-size:18px;line-height:1;flex-shrink:0;}
+.ms-next-body{flex:1;min-width:0;}
+.ms-next-label{font-size:11px;font-weight:600;text-transform:uppercase;
+  letter-spacing:.06em;opacity:.65;margin-bottom:2px;}
+.ms-next-title{font-size:14px;font-weight:600;line-height:1.3;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ms-next-days{font-size:28px;font-weight:300;letter-spacing:-0.02em;
+  line-height:1;flex-shrink:0;text-align:right;}
+.ms-next-date{font-size:11px;opacity:.6;text-align:right;margin-top:2px;}
 </style>
 </head>
 <body>
@@ -749,6 +765,7 @@ function buildHTML(){
     +'<div '+(V==='all'?'':'hidden')+'>'+overview+'</div>'
 
     +'<div '+(V==='n'?'':'hidden')+'>'
+    +buildMsCard('n','#0F6E56','n')
     +buildAlerts('n',allMs)
     +'<div class="add-bar">'
     +buildDriveChip('n')
@@ -763,6 +780,7 @@ function buildHTML(){
     +'</div>'
 
     +'<div '+(V==='r'?'':'hidden')+'>'
+    +buildMsCard('r','#534AB7','r')
     +buildAlerts('r',allMs)
     +'<div class="add-bar">'
     +buildDriveChip('r')
@@ -943,24 +961,21 @@ function buildPropsCard(props){
 
 // buildAlerts: milestone alerts (auto, read-only) + editable user alerts
 function buildAlerts(proj,allMs){
+  // Milestones shown via buildMsCard above — only user-editable alerts here
   const stored=(S.projectAlerts||{})[proj];
   const userAlerts=stored&&stored.length?stored:(DA[proj]||[]);
-  const projMs=allMs.filter(m=>m.proj===proj);
-  const msAlerts=projMs.map(m=>{
-    const cl=m.days<=3?'red':'amber';
-    const prefix=m.days<=3?'⚑ ':'⏳ ';
-    return{type:cl,text:prefix+esc(m.label)+' — '+m.days+' dias ('+m.date.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})+')',readonly:true};
-  });
-  const merged=[...msAlerts,...userAlerts];
-  return merged.map((a,i)=>{
-    if(a.readonly)return'<div class="alert '+a.type+'"><strong>'+a.text+'</strong></div>';
-    const ui=i-msAlerts.length;
-    return'<div class="alert '+a.type+'">'
-      +'<textarea class="alert-inp" rows="1" oninput="ar(this)"'
-      +' onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();this.blur();}"'
-      +' onblur="B.saveAlert(\''+proj+'\','+ui+',this.value)">'+esc(a.text)+'</textarea>'
-      +'<button class="alert-x" onclick="B.delAlert(\''+proj+'\','+ui+')">✕</button></div>';
-  }).join('')+'<button class="add-alert" onclick="B.addAlert(\''+proj+'\')">+ alerta</button>';
+  const rows=userAlerts.map(function(a,i){
+    return'<div class="alert '+a.type+'">'      +'<textarea class="alert-inp" rows="1" oninput="ar(this)"'      +' onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();this.blur();}"\''      +' onblur="B.saveAlert(\''+proj+'\','+i+',this.value)">'+esc(a.text)+'</textarea>'      +'<button class="alert-x" onclick="B.delAlert(\''+proj+'\','+i+')">✕</button></div>';
+  }).join('');
+  return rows+'<button class="add-alert" onclick="B.addAlert(\''+proj+'\')">+ alerta</button>';
+}
+
+
+// ── Milestone highlight card ─────────────────────────────────────────────────
+function buildMsCard(projId,color,cls){
+  const nm=getNearestMilestone(projId);
+  if(!nm)return'';
+  return'<div class="ms-next-card '+cls+'" style="border-color:'+color+'44;background:'+color+'11">'    +'<div class="ms-next-icon" style="color:'+color+'">⚑</div>'    +'<div class="ms-next-body">'    +'<div class="ms-next-label" style="color:'+color+'">próximo milestone</div>'    +'<div class="ms-next-title" style="color:'+color+'" title="'+esc(nm.label)+'">'+esc(nm.label)+'</div>'    +'</div>'    +'<div>'    +'<div class="ms-next-days" style="color:'+color+'">'+nm.days+'</div>'    +'<div class="ms-next-date" style="color:'+color+'">dias · '+nm.date.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})+'</div>'    +'</div>'    +'</div>';
 }
 
 function buildMsList(proj,color){
@@ -1066,6 +1081,7 @@ function buildCustomView(p,allMs){
     +ms.map(m=>'<div class="ms-item"><span class="ms-pill" style="background:'+c+'22;color:'+c+'">'+esc(m.date)+'</span><span class="ms-txt">'+esc(m.label)+'</span><button class="ms-del" onclick="B.delMilestone(\''+p.id+'\',\''+m.id+'\')">✕</button></div>').join('')
     +'</div>':'';
   return'<div '+(V===p.id?'':'hidden')+'>'
+    +buildMsCard(p.id,p.color||'#888','custom')
     +buildAlerts(p.id,allMs)
     +'<div class="add-bar">'
     +buildDriveChip(p.id)
