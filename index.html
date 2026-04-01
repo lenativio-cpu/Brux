@@ -380,6 +380,12 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--tx);min-h
 .postit[draggable="true"]:active{cursor:grabbing;}
 .postit.pit-dragging{opacity:.3;transform:scale(.96)!important;}
 .postit.pit-over{outline:2px dashed rgba(0,0,0,.22);outline-offset:3px;}
+
+/* drive link chip */
+.drive-chip{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--tx3);border:0.5px solid var(--bd);border-radius:20px;padding:4px 12px;background:transparent;cursor:pointer;font-family:'DM Sans',sans-serif;text-decoration:none;transition:all .15s;white-space:nowrap;}
+.drive-chip:hover{color:var(--tx2);border-color:var(--bds);background:var(--surf);}
+.drive-chip.add{color:var(--tx3);border-style:dashed;}
+.drive-chip.add:hover{color:var(--n);border-color:var(--n);}
 </style>
 </head>
 <body>
@@ -504,7 +510,7 @@ async function init(){
       let ch=false;
       for(const d of TDEFS){if(!S.tasks[d.id]){S.tasks[d.id]={done:d.done||false};ch=true;}}
       ['customTasks','customProjects','archivedProjects'].forEach(k=>{if(!Array.isArray(S[k])){S[k]=[];ch=true;}});
-      ['propNotes','notes','projectAlerts','projectMilestones','taskComments','taskStatus','taskOrder'].forEach(k=>{if(!S[k]||typeof S[k]!=='object'||Array.isArray(S[k])){S[k]={};ch=true;}});
+      ['propNotes','notes','projectAlerts','projectMilestones','taskComments','taskStatus','taskOrder','driveLinks'].forEach(k=>{if(!S[k]||typeof S[k]!=='object'||Array.isArray(S[k])){S[k]={};ch=true;}});
       if(!Array.isArray(S.hiddenProps)){S.hiddenProps=[];ch=true;}
       if(!Array.isArray(S.postits)){S.postits=[];ch=true;}
       // Migrate hardcoded Natura/Riachuelo milestones into projectMilestones (runs once)
@@ -540,7 +546,7 @@ function fresh(){
       n:[{id:'ms-n-fixed-1',label:'Touchpoint Lili e Diego — 2 opções de conceito de marca',date:'17/04',ts:0,fixed:true}],
       r:[{id:'ms-r-fixed-1',label:'Comitê com lideranças — Presidente Riachuelo',date:'29/04',ts:0,fixed:true}],
     },
-    taskComments:{},taskStatus:{},taskOrder:{},hiddenProps:[],postits:[],
+    taskComments:{},taskStatus:{},taskOrder:{},hiddenProps:[],postits:[],driveLinks:{},
     _msInitialized:true,
     updates:[{id:uid(),text:'Dashboard BRUX iniciado.',ts:Date.now()}],_ts:Date.now()};
 }
@@ -706,6 +712,7 @@ function buildHTML(){
     +'<div '+(V==='n'?'':'hidden')+'>'
     +buildAlerts('n',allMs)
     +'<div class="add-bar">'
+    +buildDriveChip('n')
     +'<button class="btn-sm" style="font-size:11px;color:var(--tx3)" onclick="B.archiveFixed(\'n\')">📦 arquivar</button>'
     +'<button class="btn-sm" onclick="B.openAddMilestone(\'n\')">+ milestone</button>'
     +'<button class="add-btn add-btn-n" onclick="B.openAddTask(\'n\')">+ tarefa</button>'
@@ -719,6 +726,7 @@ function buildHTML(){
     +'<div '+(V==='r'?'':'hidden')+'>'
     +buildAlerts('r',allMs)
     +'<div class="add-bar">'
+    +buildDriveChip('r')
     +'<button class="btn-sm" style="font-size:11px;color:var(--tx3)" onclick="B.archiveFixed(\'r\')">📦 arquivar</button>'
     +'<button class="btn-sm" onclick="B.openAddMilestone(\'r\')">+ milestone</button>'
     +'<button class="add-btn add-btn-r" onclick="B.openAddTask(\'r\')">+ tarefa</button>'
@@ -1021,6 +1029,7 @@ function buildCustomView(p,allMs){
   return'<div '+(V===p.id?'':'hidden')+'>'
     +buildAlerts(p.id,allMs)
     +'<div class="add-bar">'
+    +buildDriveChip(p.id)
     +'<button class="btn-sm" style="font-size:11px;color:var(--tx3)" onclick="B.archiveProject(\''+p.id+'\')">📦 arquivar</button>'
     +'<button class="btn-sm" onclick="B.openAddMilestone(\''+p.id+'\')">+ milestone</button>'
     +'<button class="add-btn" style="border-color:'+c+'66;color:'+c+'" onclick="B.openAddTask(\''+p.id+'\')">+ tarefa</button>'
@@ -1029,6 +1038,17 @@ function buildCustomView(p,allMs){
     +(pend.length?'<div class="sec">Tarefas pendentes</div><div class="task-list">'+pend.map(t=>buildTask(t)).join('')+'</div>':'<p class="empty">Nenhuma tarefa pendente.</p>')
     +(done.length?'<button class="done-tog" onclick="B.toggleDR(\''+p.id+'\')">'+(showDR[p.id]?'▾':'▸')+' concluídas ('+done.length+')</button>'+(showDR[p.id]?'<div class="task-list" style="margin-top:8px">'+done.map(t=>buildTask(t)).join('')+'</div>':''):'')
     +'</div>';
+}
+
+
+// ── Drive link chip ───────────────────────────────────────────────────────────
+function buildDriveChip(projId){
+  // projId can be 'n', 'r', or a custom project id
+  const url=(S.driveLinks||{})[projId]||'';
+  if(url){
+    return'<a class="drive-chip" href="'+esc(url)+'" target="_blank" rel="noopener" aria-label="Abrir pasta do projeto no Google Drive">📁 pasta do projeto ↗</a>';
+  }
+  return'<button class="drive-chip add" onclick="B.openDriveEdit(\''+projId+'\')" aria-label="Adicionar link da pasta do projeto">+ adicionar pasta</button>';
 }
 
 function buildMural(){
@@ -1646,6 +1666,36 @@ B.confirmPostit=async function(){
 B.delPostit=async function(id){
   S.postits=(S.postits||[]).filter(p=>p.id!==id);
   await save('Nota removida');render();
+};
+
+
+B.openDriveEdit=function(projId){
+  const current=(S.driveLinks||{})[projId]||'';
+  showModal('<div class="modal-ov" onclick="if(event.target===this)B.closeModal()">'
+    +'<div class="modal"><div class="modal-drag"></div><h3>Pasta do projeto no Google Drive</h3>'
+    +'<div class="mf"><label class="ml" for="drv-url">Link da pasta</label>'
+    +'<input class="mi" id="drv-url" type="url" placeholder="https://drive.google.com/..." value="'+esc(current)+'"/></div>'
+    +'<div style="font-size:11px;color:var(--tx3);margin-top:-6px;margin-bottom:12px">Cole o link de compartilhamento da pasta do Drive.</div>'
+    +(current?'<div class="mf"><button class="mc" style="color:var(--urg);border-color:var(--urgb)" onclick="B.saveDriveLink(''+projId+'','')">Remover link</button></div>':'')
+    +'<div class="merr" id="drv-e"></div>'
+    +'<div class="ma"><button class="mc" onclick="B.closeModal()">Cancelar</button>'
+    +'<button class="mok" style="background:var(--n)" onclick="B.saveDriveLink(''+projId+'',document.getElementById('drv-url').value)">Salvar</button>'
+    +'</div></div></div>');
+  setTimeout(function(){var e=document.getElementById('drv-url');if(e)e.focus();},80);
+};
+
+B.saveDriveLink=async function(projId,url){
+  const trimmed=(url||'').trim();
+  if(trimmed&&!trimmed.startsWith('http')){
+    document.getElementById('drv-e')&&(document.getElementById('drv-e').textContent='Use um link completo (começa com https://)');
+    return;
+  }
+  if(!S.driveLinks)S.driveLinks={};
+  if(trimmed)S.driveLinks[projId]=trimmed;
+  else delete S.driveLinks[projId];
+  B.closeModal();
+  await save(trimmed?'Link da pasta salvo ✓':'Link removido');
+  render();
 };
 
 // ── postit drag & drop reorder ─────────────────────────────────────────────
