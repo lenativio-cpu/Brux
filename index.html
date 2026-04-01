@@ -507,6 +507,17 @@ async function init(){
       ['propNotes','notes','projectAlerts','projectMilestones','taskComments','taskStatus','taskOrder'].forEach(k=>{if(!S[k]||typeof S[k]!=='object'||Array.isArray(S[k])){S[k]={};ch=true;}});
       if(!Array.isArray(S.hiddenProps)){S.hiddenProps=[];ch=true;}
       if(!Array.isArray(S.postits)){S.postits=[];ch=true;}
+      // Migrate hardcoded Natura/Riachuelo milestones into projectMilestones (runs once)
+      if(!S._msInitialized){
+        if(!S.projectMilestones)S.projectMilestones={};
+        if(!Array.isArray(S.projectMilestones['n']))S.projectMilestones['n']=[];
+        if(!Array.isArray(S.projectMilestones['r']))S.projectMilestones['r']=[];
+        const nHasTouchpoint=S.projectMilestones['n'].some(function(m){return m.label&&m.label.includes('Touchpoint');});
+        const rHasComite=S.projectMilestones['r'].some(function(m){return m.label&&m.label.includes('Comit');});
+        if(!nHasTouchpoint)S.projectMilestones['n'].push({id:'ms-n-fixed-1',label:'Touchpoint Lili e Diego — 2 opções de conceito de marca',date:'17/04',ts:0,fixed:true});
+        if(!rHasComite)S.projectMilestones['r'].push({id:'ms-r-fixed-1',label:'Comitê com lideranças — Presidente Riachuelo',date:'29/04',ts:0,fixed:true});
+        S._msInitialized=true;ch=true;
+      }
       if(!Array.isArray(S.customProps)){S.customProps=[];ch=true;}
       if(ch)await setDoc(ref,S);
     }
@@ -523,7 +534,15 @@ async function init(){
 function fresh(){
   const tasks={};
   for(const d of TDEFS)tasks[d.id]={done:d.done||false};
-  return{tasks,notes:{},propNotes:{},customTasks:[],customProps:[],customProjects:[],archivedProjects:[],projectAlerts:{},projectMilestones:{},taskComments:{},taskStatus:{},taskOrder:{},hiddenProps:[],postits:[],updates:[{id:uid(),text:'Dashboard BRUX iniciado.',ts:Date.now()}],_ts:Date.now()};
+  return{tasks,notes:{},propNotes:{},customTasks:[],customProps:[],customProjects:[],archivedProjects:[],
+    projectAlerts:{},
+    projectMilestones:{
+      n:[{id:'ms-n-fixed-1',label:'Touchpoint Lili e Diego — 2 opções de conceito de marca',date:'17/04',ts:0,fixed:true}],
+      r:[{id:'ms-r-fixed-1',label:'Comitê com lideranças — Presidente Riachuelo',date:'29/04',ts:0,fixed:true}],
+    },
+    taskComments:{},taskStatus:{},taskOrder:{},hiddenProps:[],postits:[],
+    _msInitialized:true,
+    updates:[{id:uid(),text:'Dashboard BRUX iniciado.',ts:Date.now()}],_ts:Date.now()};
 }
 
 async function save(msg){
@@ -590,36 +609,37 @@ function parseMsDate(dateStr){
   return new Date(2026,parseInt(m[2])-1,parseInt(m[1]));
 }
 
-// Central milestone registry — all milestones across all projects
+// ── Single source of truth for milestones ────────────────────────────────────
+// All milestones live in S.projectMilestones[projId][]
+// Fixed Natura/Riachuelo milestones are migrated in on init
+function getProjMeta(projId){
+  if(projId==='n')return{color:'#0F6E56',label:'Natura MMBB'};
+  if(projId==='r')return{color:'#534AB7',label:'Riachuelo'};
+  const cp=(S.customProjects||[]).find(p=>p.id===projId);
+  return cp?{color:cp.color||'#888',label:cp.name}:null;
+}
+
 function getAllMilestones(){
   const ms=[];
-  // Fixed milestones
-  const fixed=[
-    {label:'Touchpoint Lili e Diego',date:new Date(2026,3,17),proj:'n',color:'#0F6E56',projLabel:'Natura MMBB'},
-    {label:'Comitê com lideranças',date:new Date(2026,3,29),proj:'r',color:'#534AB7',projLabel:'Riachuelo'},
-  ];
-  fixed.forEach(m=>ms.push({...m,days:dlu(m.date)}));
-  // User-added milestones for Natura and Riachuelo
-  for(const proj of['n','r']){
-    const c=proj==='n'?'#0F6E56':'#534AB7';
-    const lbl=proj==='n'?'Natura MMBB':'Riachuelo';
-    for(const m of(S.projectMilestones||{})[proj]||[]){
+  const allProjIds=['n','r',...(S.customProjects||[]).map(p=>p.id)];
+  for(const projId of allProjIds){
+    const meta=getProjMeta(projId);
+    if(!meta)continue;
+    for(const m of(S.projectMilestones||{})[projId]||[]){
+      if(!m.label||!m.date)continue;
       const d=parseMsDate(m.date);
-      if(d)ms.push({label:m.label,date:d,proj,color:c,projLabel:lbl,days:dlu(d)});
-    }
-  }
-  // Custom project milestones
-  for(const cp of(S.customProjects||[])){
-    if(cp.milestoneDate){
-      const d=new Date(cp.milestoneDate);
-      ms.push({label:cp.milestoneLabel||cp.name,date:d,proj:cp.id,color:cp.color||'#888',projLabel:cp.name,days:dlu(d)});
-    }
-    for(const m of(S.projectMilestones||{})[cp.id]||[]){
-      const d=parseMsDate(m.date);
-      if(d)ms.push({label:m.label,date:d,proj:cp.id,color:cp.color||'#888',projLabel:cp.name,days:dlu(d)});
+      if(!d)continue;
+      ms.push({id:m.id,label:m.label,date:d,proj:projId,
+        color:meta.color,projLabel:meta.label,days:dlu(d),fixed:!!m.fixed});
     }
   }
   return ms.filter(m=>m.days>=0).sort((a,b)=>a.days-b.days);
+}
+
+// Nearest upcoming milestone for a project (used by thermo cards + project views)
+function getNearestMilestone(projId){
+  const ms=getAllMilestones().filter(m=>m.proj===projId);
+  return ms.length?ms[0]:null;
 }
 
 // ── render ─────────────────────────────────────────────────────────────────────
@@ -631,8 +651,6 @@ function render(){
 }
 
 function buildHTML(){
-  const dN=new Date(2026,3,17),dR=new Date(2026,3,29);
-  const dn=dlu(dN),dr=dlu(dR);
   const bN=calcBar(NP,'n'),bR=calcBar(RP,'r');
   const nat=projTasks('n'),ria=projTasks('r');
   const natP=nat.filter(t=>!t.done),natD=nat.filter(t=>t.done);
@@ -644,8 +662,14 @@ function buildHTML(){
 
   // thermo strip
   const strip='<div class="thermo-wrap"><div class="thermo-strip">'
-    +buildTC('n','🌿 Natura MMBB',dn,'Touchpoint Lili+Diego (17/04)',bN,NP,'#0F6E56')
-    +buildTC('r','✦ Riachuelo',dr,'Comitê lideranças (29/04)',bR,RP,'#534AB7')
+    +(()=>{
+    const nmN=getNearestMilestone('n');
+    const nmR=getNearestMilestone('r');
+    const dnD=nmN?nmN.days:'-';const dnL=nmN?nmN.label:'sem milestone';
+    const drD=nmR?nmR.days:'-';const drL=nmR?nmR.label:'sem milestone';
+    return buildTC('n','🌿 Natura MMBB',dnD,dnL,bN,NP,'#0F6E56')
+      +buildTC('r','✦ Riachuelo',drD,drL,bR,RP,'#534AB7');
+  })()
     +(S.customProjects||[]).map(p=>buildTCCustom(p)).join('')
     +buildPropsCard(allProps)
     +'</div></div>';
@@ -893,11 +917,29 @@ function buildAlerts(proj,allMs){
 }
 
 function buildMsList(proj,color){
-  const ms=(S.projectMilestones||{})[proj]||[];
+  // Sort milestones by date, nearest first
+  const raw=(S.projectMilestones||{})[proj]||[];
+  const ms=raw.slice().sort((a,b)=>{
+    const da=parseMsDate(a.date),db=parseMsDate(b.date);
+    if(!da&&!db)return 0;if(!da)return 1;if(!db)return -1;
+    return da-db;
+  });
   if(!ms.length)return'';
-  return'<div class="sec">Milestones adicionados</div><div class="ms-list">'
-    +ms.map(m=>'<div class="ms-item"><span class="ms-pill" style="background:'+color+'22;color:'+color+'">'+esc(m.date)+'</span><span class="ms-txt">'+esc(m.label)+'</span><button class="ms-del" onclick="B.delMilestone(\''+proj+'\',\''+m.id+'\')">✕</button></div>').join('')
-    +'</div>';
+  const nearest=getNearestMilestone(proj);
+  const rows=ms.map(m=>{
+    const isNearest=nearest&&m.id===nearest.id;
+    const dObj=parseMsDate(m.date);
+    const daysLeft=dObj?dlu(dObj):null;
+    const badge=isNearest?'<span style="font-size:10px;background:'+color+'22;color:'+color+';padding:1px 6px;border-radius:8px;font-weight:600">próximo</span>':'';
+    return'<div class="ms-item" style="'+(isNearest?'border-color:'+color+'66;':'')+'">'
+      +'<span class="ms-pill" style="background:'+color+'22;color:'+color+'">'+esc(m.date||'?')+'</span>'
+      +'<span class="ms-txt">'+esc(m.label)+'</span>'
+      +badge
+      +(daysLeft!==null?'<span style="font-size:11px;color:var(--tx3);margin-left:4px">'+daysLeft+'d</span>':'')
+      +(m.fixed?'':'<button class="ms-del" onclick="B.delMilestone(\''+proj+'\',\''+m.id+'\')">✕</button>')
+      +'</div>';
+  }).join('');
+  return'<div class="sec">Milestones do projeto</div><div class="ms-list">'+rows+'</div>';
 }
 
 function buildTask(task){
@@ -1032,7 +1074,9 @@ function buildArchive(){
 }
 
 
-// ── Dynamic timeline conflict detection ───────────────────────────────────────
+// ── Dynamic timeline conflict detection (refined) ────────────────────────────
+// Rules: only events with relevance>=2, no undefined projectId,
+// grouped alerts (not one per pair), max 5 output, human language
 
 function parseTaskDate(dateStr){
   // Returns {start: Date, end: Date} or null
@@ -1067,35 +1111,42 @@ function parseTaskDate(dateStr){
 
 function getTimelineEvents(){
   const events=[];
-  // Fixed task defs
+  const validProjs=new Set(['n','r',...(S.customProjects||[]).map(p=>p.id)]);
+  const cutoff=new Date(2026,2,25); // ignore tasks before late March
+
+  // Helper: compute relevance
+  function relevance(t,isMilestone){
+    if(isMilestone)return 3;
+    const st=(S.taskStatus||{})[t.id]||'and';
+    if(st==='atr'||st==='pri'||t.pri===0)return 2;
+    return 1;
+  }
+
+  // Tasks (fixed defs)
   for(const t of TDEFS){
+    if(!validProjs.has(t.p))continue;
+    const r=relevance(t,!!t.milestone);
+    if(r<2)continue; // skip normal tasks
     const range=parseTaskDate(t.date);
-    if(!range)continue;
-    if(range.start<new Date(2026,2,1))continue; // skip past tasks before March
-    events.push({
-      id:t.id,projectId:t.p,title:t.title,
-      startDate:range.start,endDate:range.end,
-      type:'task',milestone:!!t.milestone
-    });
+    if(!range||range.end<cutoff)continue;
+    events.push({id:t.id,projectId:t.p,title:t.title,
+      startDate:range.start,endDate:range.end,relevance:r,milestone:!!t.milestone});
   }
   // Custom tasks
   for(const t of(S.customTasks||[])){
+    if(!t.p||!validProjs.has(t.p))continue;
+    const r=relevance(t,false);
+    if(r<2)continue;
     const range=parseTaskDate(t.date);
-    if(!range)continue;
-    events.push({
-      id:t.id,projectId:t.p,title:t.title,
-      startDate:range.start,endDate:range.end,
-      type:'task',milestone:false
-    });
+    if(!range||range.end<cutoff)continue;
+    events.push({id:t.id,projectId:t.p,title:t.title,
+      startDate:range.start,endDate:range.end,relevance:r,milestone:false});
   }
-  // Milestones (all projects)
+  // Milestones — always relevance 3
   for(const m of getAllMilestones()){
-    events.push({
-      id:'ms-'+m.proj+'-'+(m.label||'').slice(0,10),
-      projectId:m.proj,title:m.label,
-      startDate:m.date,endDate:m.date,
-      type:'milestone',milestone:true
-    });
+    if(!m.proj||!validProjs.has(m.proj)||!m.label||!m.date)continue;
+    events.push({id:'ms-'+m.id,projectId:m.proj,title:m.label,
+      startDate:m.date,endDate:m.date,relevance:3,milestone:true});
   }
   return events;
 }
@@ -1110,53 +1161,87 @@ function daysBetween(a,b){
   return Math.round((b.startDate-a.endDate)/86400000);
 }
 
+function projName(id){
+  if(id==='n')return'Natura';
+  if(id==='r')return'Riachuelo';
+  return((S.customProjects||[]).find(p=>p.id===id)||{}).name||'';
+}
+function shortTitle(t){return t.length>45?t.slice(0,43)+'…':t;}
+
 function generateConflicts(events){
-  const alerts=[];
-  const seen=new Set();
-  // Only look at events in the current visible window (today to +90 days)
   const horizon=new Date(TODAY.getTime()+90*86400000);
-  const upcoming=events.filter(e=>e.endDate>=TODAY&&e.startDate<=horizon);
+  const upcoming=events.filter(e=>e.endDate>=TODAY&&e.startDate<=horizon&&e.projectId);
+
+  // Group overlapping windows by time period instead of pairs
+  // Track what pairs we've already reported to avoid repetition
+  const seen=new Set();
+  const raw=[];
 
   for(let i=0;i<upcoming.length;i++){
     for(let j=i+1;j<upcoming.length;j++){
       const a=upcoming[i],b=upcoming[j];
-      // Skip same project comparisons (less relevant)
       if(a.projectId===b.projectId)continue;
-      const key=[a.id,b.id].sort().join('|');
-      if(seen.has(key))continue;
-      seen.add(key);
+      // Deduplicate by week-window + project pair
+      const weekA=Math.floor((a.startDate-TODAY)/604800000);
+      const pairKey=(a.projectId<b.projectId?a.projectId+'|'+b.projectId:b.projectId+'|'+a.projectId)+'@w'+weekA;
+      if(seen.has(pairKey))continue;
 
       if(overlaps(a,b)){
-        // Both are milestones = critical collision
-        const isCritical=a.milestone||b.milestone;
-        const projA=a.projectId==='n'?'Natura':a.projectId==='r'?'Riachuelo':((S.customProjects||[]).find(p=>p.id===a.projectId)||{}).name||a.projectId;
-        const projB=b.projectId==='n'?'Natura':b.projectId==='r'?'Riachuelo':((S.customProjects||[]).find(p=>p.id===b.projectId)||{}).name||b.projectId;
-        alerts.push({
-          type:isCritical?'critical':'parallel',
-          title:(isCritical?'⚑ Encavalamento crítico':'↔ Atividades paralelas')+' — '+projA+' & '+projB,
-          text:'"'+a.title.slice(0,50)+(a.title.length>50?'…':'')+'" e "'+b.title.slice(0,50)+(b.title.length>50?'…':'')+'" acontecem ao mesmo tempo.',
+        seen.add(pairKey);
+        const isCrit=a.milestone||b.milestone;
+        const pA=projName(a.projectId),pB=projName(b.projectId);
+        raw.push({
+          type:isCrit?'critical':'parallel',score:isCrit?10:5,
+          title:(isCrit?'⚑ ':'↔ ')+pA+' e '+pB+' em paralelo',
+          text:shortTitle(a.title)+' coincide com '+shortTitle(b.title)+'.',
         });
       } else {
         const gap=daysBetween(a,b);
         if(gap>=0&&gap<=3){
-          const projA=a.projectId==='n'?'Natura':a.projectId==='r'?'Riachuelo':((S.customProjects||[]).find(p=>p.id===a.projectId)||{}).name||a.projectId;
-          const projB=b.projectId==='n'?'Natura':b.projectId==='r'?'Riachuelo':((S.customProjects||[]).find(p=>p.id===b.projectId)||{}).name||b.projectId;
-          alerts.push({
-            type:'compression',
-            title:'⚡ Compressão — '+projA+' → '+projB,
-            text:'"'+a.title.slice(0,50)+(a.title.length>50?'…':'')+'" termina '+gap+' dia'+(gap===1?'':'s')+' antes de "'+b.title.slice(0,50)+(b.title.length>50?'…':'')+'" começar.',
+          seen.add(pairKey);
+          const pA=projName(a.projectId),pB=projName(b.projectId);
+          raw.push({
+            type:'compression',score:7,
+            title:'⚡ Pouco espaço entre '+pA+' e '+pB,
+            text:shortTitle(a.title)+' termina '+(gap===0?'no mesmo dia que':'apenas '+gap+' dia'+(gap>1?'s':'')+' antes de')+' '+shortTitle(b.title)+'.',
           });
         }
       }
     }
   }
 
-  // Sort: critical first, then compression, then parallel
-  const order={critical:0,compression:1,parallel:2};
-  alerts.sort((a,b)=>(order[a.type]||9)-(order[b.type]||9));
+  // Concentration: many high-relevance events in same 7-day window
+  const windows={};
+  for(const e of upcoming){
+    const wk=Math.floor((e.startDate-TODAY)/604800000);
+    if(!windows[wk])windows[wk]=[];
+    windows[wk].push(e);
+  }
+  for(const [wk,evs] of Object.entries(windows)){
+    if(evs.length>=3){
+      const projs=[...new Set(evs.map(e=>projName(e.projectId)).filter(Boolean))];
+      if(projs.length>=2){
+        const d=new Date(TODAY.getTime()+parseInt(wk)*604800000);
+        const dateStr=d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
+        raw.push({
+          type:'compression',score:4,
+          title:'📅 Semana intensa a partir de '+dateStr,
+          text:evs.length+' entregas de '+projs.join(', ')+' na mesma semana.',
+        });
+      }
+    }
+  }
 
-  // Cap at 6 alerts to avoid overwhelming
-  return alerts.slice(0,6);
+  // Sort by score desc, deduplicate similar titles, cap at 5
+  raw.sort((a,b)=>b.score-a.score);
+  const out=[],titlesOut=new Set();
+  for(const a of raw){
+    if(titlesOut.has(a.title))continue;
+    titlesOut.add(a.title);
+    out.push(a);
+    if(out.length>=5)break;
+  }
+  return out;
 }
 
 function buildTimeline(allMs){
