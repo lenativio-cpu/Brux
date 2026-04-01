@@ -1031,6 +1031,134 @@ function buildArchive(){
   }).join('');
 }
 
+
+// ── Dynamic timeline conflict detection ───────────────────────────────────────
+
+function parseTaskDate(dateStr){
+  // Returns {start: Date, end: Date} or null
+  if(!dateStr)return null;
+  const s=dateStr.toLowerCase().trim();
+  if(s==='hoje'||s==='agora'){const d=new Date(TODAY);return{start:d,end:d};}
+  if(s.includes('esta semana')){
+    const d=new Date(TODAY);
+    return{start:d,end:new Date(TODAY.getTime()+6*86400000)};
+  }
+  // Range: "09/03–20/03" or "09/03 – 20/03" or "09/03-20/03"
+  const rangeM=s.match(/(\d{1,2})\/(\d{1,2})\s*[–\-]+\s*(\d{1,2})\/(\d{1,2})/);
+  if(rangeM){
+    const start=new Date(2026,parseInt(rangeM[2])-1,parseInt(rangeM[1]));
+    const end=new Date(2026,parseInt(rangeM[4])-1,parseInt(rangeM[3]));
+    return{start,end};
+  }
+  // Range with "até": "até 07/04"
+  const ateM=s.match(/at[eé]\s*(\d{1,2})\/(\d{1,2})/);
+  if(ateM){
+    const end=new Date(2026,parseInt(ateM[2])-1,parseInt(ateM[1]));
+    return{start:new Date(TODAY),end};
+  }
+  // Single date: "13/04" or "13 ou 14/04" → take first
+  const singleM=s.match(/(\d{1,2})\/(\d{1,2})/);
+  if(singleM){
+    const d=new Date(2026,parseInt(singleM[2])-1,parseInt(singleM[1]));
+    return{start:d,end:d};
+  }
+  return null;
+}
+
+function getTimelineEvents(){
+  const events=[];
+  // Fixed task defs
+  for(const t of TDEFS){
+    const range=parseTaskDate(t.date);
+    if(!range)continue;
+    if(range.start<new Date(2026,2,1))continue; // skip past tasks before March
+    events.push({
+      id:t.id,projectId:t.p,title:t.title,
+      startDate:range.start,endDate:range.end,
+      type:'task',milestone:!!t.milestone
+    });
+  }
+  // Custom tasks
+  for(const t of(S.customTasks||[])){
+    const range=parseTaskDate(t.date);
+    if(!range)continue;
+    events.push({
+      id:t.id,projectId:t.p,title:t.title,
+      startDate:range.start,endDate:range.end,
+      type:'task',milestone:false
+    });
+  }
+  // Milestones (all projects)
+  for(const m of getAllMilestones()){
+    events.push({
+      id:'ms-'+m.proj+'-'+(m.label||'').slice(0,10),
+      projectId:m.proj,title:m.label,
+      startDate:m.date,endDate:m.date,
+      type:'milestone',milestone:true
+    });
+  }
+  return events;
+}
+
+function overlaps(a,b){
+  // True if date ranges overlap
+  return a.startDate<=b.endDate&&b.startDate<=a.endDate;
+}
+
+function daysBetween(a,b){
+  // Positive = b comes after a ends; negative = they overlap
+  return Math.round((b.startDate-a.endDate)/86400000);
+}
+
+function generateConflicts(events){
+  const alerts=[];
+  const seen=new Set();
+  // Only look at events in the current visible window (today to +90 days)
+  const horizon=new Date(TODAY.getTime()+90*86400000);
+  const upcoming=events.filter(e=>e.endDate>=TODAY&&e.startDate<=horizon);
+
+  for(let i=0;i<upcoming.length;i++){
+    for(let j=i+1;j<upcoming.length;j++){
+      const a=upcoming[i],b=upcoming[j];
+      // Skip same project comparisons (less relevant)
+      if(a.projectId===b.projectId)continue;
+      const key=[a.id,b.id].sort().join('|');
+      if(seen.has(key))continue;
+      seen.add(key);
+
+      if(overlaps(a,b)){
+        // Both are milestones = critical collision
+        const isCritical=a.milestone||b.milestone;
+        const projA=a.projectId==='n'?'Natura':a.projectId==='r'?'Riachuelo':((S.customProjects||[]).find(p=>p.id===a.projectId)||{}).name||a.projectId;
+        const projB=b.projectId==='n'?'Natura':b.projectId==='r'?'Riachuelo':((S.customProjects||[]).find(p=>p.id===b.projectId)||{}).name||b.projectId;
+        alerts.push({
+          type:isCritical?'critical':'parallel',
+          title:(isCritical?'⚑ Encavalamento crítico':'↔ Atividades paralelas')+' — '+projA+' & '+projB,
+          text:'"'+a.title.slice(0,50)+(a.title.length>50?'…':'')+'" e "'+b.title.slice(0,50)+(b.title.length>50?'…':'')+'" acontecem ao mesmo tempo.',
+        });
+      } else {
+        const gap=daysBetween(a,b);
+        if(gap>=0&&gap<=3){
+          const projA=a.projectId==='n'?'Natura':a.projectId==='r'?'Riachuelo':((S.customProjects||[]).find(p=>p.id===a.projectId)||{}).name||a.projectId;
+          const projB=b.projectId==='n'?'Natura':b.projectId==='r'?'Riachuelo':((S.customProjects||[]).find(p=>p.id===b.projectId)||{}).name||b.projectId;
+          alerts.push({
+            type:'compression',
+            title:'⚡ Compressão — '+projA+' → '+projB,
+            text:'"'+a.title.slice(0,50)+(a.title.length>50?'…':'')+'" termina '+gap+' dia'+(gap===1?'':'s')+' antes de "'+b.title.slice(0,50)+(b.title.length>50?'…':'')+'" começar.',
+          });
+        }
+      }
+    }
+  }
+
+  // Sort: critical first, then compression, then parallel
+  const order={critical:0,compression:1,parallel:2};
+  alerts.sort((a,b)=>(order[a.type]||9)-(order[b.type]||9));
+
+  // Cap at 6 alerts to avoid overwhelming
+  return alerts.slice(0,6);
+}
+
 function buildTimeline(allMs){
   const TL_START=new Date(2026,2,16),TL_END=new Date(2026,4,31);
   const TOTAL=Math.round((TL_END-TL_START)/86400000);
@@ -1057,11 +1185,13 @@ function buildTimeline(allMs){
     +(S.customProjects||[]).map(p=>'<div class="tl-li"><div class="tl-dot" style="background:'+p.color+'"></div>'+esc(p.name)+'</div>').join('')
     +'<div class="tl-li"><div class="tl-dot" style="background:var(--urg);border-radius:50%"></div>hoje</div>'
     +'</div>';
-  const obsHTML=[
-    {type:'red',title:'⚑ Encavalamento crítico — 02 a 07/04',text:'Workshop Riachuelo (02/04) coincide com início das entrevistas Natura.'},
-    {type:'amber',title:'Sobreposição — 06 a 16/04',text:'Conceito Natura e alinhamentos Riachuelo acontecem em paralelo.'},
-    {type:'amber',title:'Compressão — 13 a 17/04',text:'Apresentação Riachuelo (13/04) e reunião interna (14/04) ficam 3 dias antes do Touchpoint Natura.'},
-  ].map(o=>'<div class="ob '+o.type+'"><div class="ob-t">'+o.title+'</div>'+o.text+'</div>').join('');
+  // Dynamic conflict detection — calculated at render, not stored
+  const tlEvents=getTimelineEvents();
+  const conflicts=generateConflicts(tlEvents);
+  const typeMap={critical:'red',compression:'amber',parallel:'amber'};
+  const obsHTML=conflicts.length
+    ?conflicts.map(o=>'<div class="ob '+(typeMap[o.type]||'amber')+'"><div class="ob-t">'+o.title+'</div>'+esc(o.text)+'</div>').join('')
+    :'<div class="ob amber" style="opacity:.6">Nenhum conflito detectado no período.</div>';
   return legend+'<div class="tl-wrap"><div class="tl-inner">'
     +'<div class="tl-months">'+moHTML+'</div>'
     +'<div style="position:relative;margin-left:80px;">'
