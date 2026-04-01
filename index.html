@@ -1124,61 +1124,6 @@ function buildArchive(){
 }
 
 
-
-
-// ── Drive link chip ───────────────────────────────────────────────────────────
-function buildDriveChip(projId){
-  // projId can be 'n', 'r', or a custom project id
-  const url=(S.driveLinks||{})[projId]||'';
-  if(url){
-    return'<a class="drive-chip" href="'+esc(url)+'" target="_blank" rel="noopener" aria-label="Abrir pasta do projeto no Google Drive">📁 pasta do projeto ↗</a>';
-  }
-  return'<button class="drive-chip add" onclick="B.openDriveEdit(\''+projId+'\')" aria-label="Adicionar link da pasta do projeto">+ adicionar pasta</button>';
-}
-
-function buildMural(){
-  const postits=S.postits||[];
-  // project filter options
-  const projOpts=[{id:'all',label:'Todos'}];
-  projOpts.push({id:'n',label:'🌿 Natura'},{id:'r',label:'✦ Riachuelo'});
-  (S.customProjects||[]).forEach(p=>projOpts.push({id:p.id,label:(p.emoji||'📁')+' '+p.name}));
-
-  const filterBtns=projOpts.map(o=>'<button class="mural-filter-btn '+(muralFilter===o.id?'act':'')+'" onclick="B.setMuralFilter(\''+o.id+'\')">'+o.label+'</button>').join('');
-
-  const filtered=muralFilter==='all'?postits:postits.filter(p=>p.proj===muralFilter);
-
-  const cards=filtered.length?filtered.slice().reverse().map((p,i)=>{
-    const rot=['rotate(-1.5deg)', 'rotate(1deg)', 'rotate(-0.8deg)', 'rotate(1.8deg)', 'rotate(-1.2deg)', 'rotate(0.7deg)'][i%6];
-    const d=new Date(p.createdAt);
-    const dateStr=d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})+' '+d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-    const projLabel=p.proj==='n'?'Natura':p.proj==='r'?'Riachuelo':((S.customProjects||[]).find(cp=>cp.id===p.proj)||{}).name||'';
-    return'<div class="postit" id="pit-'+p.id+'" draggable="true" style="background:'+p.color+';transform:'+rot+'" ondragstart="B.pitDs(event,this)" ondragover="B.pitDov(event,this)" ondragleave="B.pitDl(event,this)" ondrop="B.pitDd(event,this)">'        +'<div class="postit-emoji">'+p.emoji+'</div>'      +'<div class="postit-text">'+esc(p.text)+'</div>'      +'<div class="postit-meta">'      +'<div><div class="postit-author">'+esc(p.author)+'</div>'      +(projLabel?'<div class="postit-proj">'+esc(projLabel)+'</div>':'')      +'<div class="postit-date">'+dateStr+'</div></div>'      +'<button class="postit-del" onclick="B.delPostit(\''+p.id+'\')">✕</button>'      +'</div></div>';
-  }).join(''):'<div class="mural-empty"><div class="mural-empty-icon">📌</div><div>Nenhuma nota ainda.<br>Crie a primeira!</div></div>';
-
-  return'<div class="mural-wrap">'    +'<div class="mural-toolbar">'    +'<div class="mural-filter">'+filterBtns+'</div>'    +'<button class="mural-add-btn" onclick="B.openAddPostit()">+ nova nota</button>'    +'</div>'    +'<div class="postit-grid">'+cards+'</div>'    +'</div>';
-}
-
-function buildArchive(){
-  const arch=S.archivedProjects||[];
-  if(!arch.length)return'<p class="empty" style="padding:32px 0">Nenhum projeto arquivado ainda.</p>';
-  return arch.map(p=>{
-    const tasks=p.tasks||[],ms=p.milestones||[],doneC=tasks.filter(t=>t.done).length,c=p.color||'var(--tx)';
-    return'<div class="arch-card"><div class="arch-hdr">'
-      +(p.emoji?'<span style="font-size:18px">'+p.emoji+'</span>':'')
-      +'<div class="arch-name" style="color:'+c+'">'+esc(p.name)+'</div>'
-      +'<span class="arch-ts">Arquivado '+ts(p.archivedAt)+'</span>'
-      +'<div class="arch-btns">'
-      +'<button class="arch-btn arch-restore" onclick="B.restoreProject(\''+p.id+'\')">↩ Restaurar</button>'
-      +'<button class="arch-btn arch-del" onclick="B.permDel(\''+p.id+'\')">🗑 Apagar</button>'
-      +'</div></div>'
-      +(ms.length?'<div class="arch-sec">Milestones</div>'+ms.map(m=>'<div style="font-size:13px;color:var(--tx2);padding:3px 0">◆ '+esc(m.label)+' — '+esc(m.date)+'</div>').join(''):'')
-      +'<div class="arch-sec">Tarefas ('+doneC+'/'+tasks.length+')</div>'
-      +tasks.map(t=>'<div class="arch-task '+(t.done?'dd':'')+'">'+(t.done?'✓':'○')+' '+esc(t.title)+'</div>').join('')
-      +'</div>';
-  }).join('');
-}
-
-
 // ── Dynamic timeline conflict detection (refined) ────────────────────────────
 // Rules: only events with relevance>=2, no undefined projectId,
 // grouped alerts (not one per pair), max 5 output, human language
