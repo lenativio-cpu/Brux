@@ -352,6 +352,34 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--tx);min-h
 .ti.st-pri{border-left:3px solid #D85A30;}
 .ti.st-agu{border-left:3px solid var(--p);}
 .ti.st-pau{opacity:.7;}
+
+/* ── mural de post-its ──────────────────────────────────────────────────────── */
+.mural-wrap{padding-bottom:32px;}
+.mural-toolbar{display:flex;align-items:center;gap:10px;margin-bottom:24px;flex-wrap:wrap;}
+.mural-filter{display:flex;gap:6px;flex-wrap:wrap;flex:1;}
+.mural-filter-btn{font-size:12px;padding:5px 12px;border-radius:20px;border:0.5px solid var(--bd);background:transparent;color:var(--tx3);cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s;}
+.mural-filter-btn:hover{color:var(--tx2);border-color:var(--bds);}
+.mural-filter-btn.act{background:var(--surf);color:var(--tx);border-color:var(--bds);font-weight:500;}
+.mural-add-btn{font-size:12px;font-weight:500;padding:7px 16px;border-radius:20px;border:none;background:var(--tx);color:var(--bg);cursor:pointer;font-family:'DM Sans',sans-serif;transition:opacity .15s;white-space:nowrap;}
+.mural-add-btn:hover{opacity:.85;}
+.postit-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:20px;}
+@media(max-width:480px){.postit-grid{grid-template-columns:1fr 1fr;gap:12px;}}
+.postit{border-radius:4px;padding:16px 14px 14px;position:relative;box-shadow:2px 3px 8px rgba(0,0,0,.10),0 1px 2px rgba(0,0,0,.06);cursor:default;transition:box-shadow .2s,transform .2s;min-height:140px;display:flex;flex-direction:column;}
+.postit:hover{box-shadow:4px 6px 16px rgba(0,0,0,.13),0 2px 4px rgba(0,0,0,.07);transform:scale(1.02) rotate(0deg)!important;}
+.postit-emoji{font-size:22px;margin-bottom:8px;line-height:1;}
+.postit-text{font-size:13px;line-height:1.55;color:rgba(0,0,0,.78);flex:1;white-space:pre-wrap;word-break:break-word;}
+.postit-meta{display:flex;align-items:center;justify-content:space-between;margin-top:10px;padding-top:8px;border-top:1px solid rgba(0,0,0,.08);}
+.postit-author{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:rgba(0,0,0,.45);}
+.postit-proj{font-size:10px;color:rgba(0,0,0,.38);font-style:italic;}
+.postit-del{background:none;border:none;cursor:pointer;font-size:13px;color:rgba(0,0,0,.3);padding:0;line-height:1;transition:color .15s;}
+.postit-del:hover{color:rgba(180,0,0,.7);}
+.postit-date{font-size:9px;color:rgba(0,0,0,.3);font-family:'DM Mono',monospace;margin-top:2px;}
+.mural-empty{text-align:center;padding:48px 0;color:var(--tx3);font-size:13px;}
+.mural-empty-icon{font-size:32px;margin-bottom:8px;}
+.postit[draggable="true"]{cursor:grab;}
+.postit[draggable="true"]:active{cursor:grabbing;}
+.postit.pit-dragging{opacity:.3;transform:scale(.96)!important;}
+.postit.pit-over{outline:2px dashed rgba(0,0,0,.22);outline-offset:3px;}
 </style>
 </head>
 <body>
@@ -450,7 +478,7 @@ const SM={
   pau:{cls:'st-pau',label:'⚪ pausada',sortW:5},
 };
 
-let db,S=null,V='all',showDA=false,showDN=false,showDR={},EC={};
+let db,S=null,V='all',showDA=false,showDN=false,showDR={},EC={},muralFilter='all';
 
 function sync(s){
   const dot=document.getElementById('sd'),lbl=document.getElementById('sl');
@@ -478,6 +506,7 @@ async function init(){
       ['customTasks','customProjects','archivedProjects'].forEach(k=>{if(!Array.isArray(S[k])){S[k]=[];ch=true;}});
       ['propNotes','notes','projectAlerts','projectMilestones','taskComments','taskStatus','taskOrder'].forEach(k=>{if(!S[k]||typeof S[k]!=='object'||Array.isArray(S[k])){S[k]={};ch=true;}});
       if(!Array.isArray(S.hiddenProps)){S.hiddenProps=[];ch=true;}
+      if(!Array.isArray(S.postits)){S.postits=[];ch=true;}
       if(!Array.isArray(S.customProps)){S.customProps=[];ch=true;}
       if(ch)await setDoc(ref,S);
     }
@@ -494,7 +523,7 @@ async function init(){
 function fresh(){
   const tasks={};
   for(const d of TDEFS)tasks[d.id]={done:d.done||false};
-  return{tasks,notes:{},propNotes:{},customTasks:[],customProps:[],customProjects:[],archivedProjects:[],projectAlerts:{},projectMilestones:{},taskComments:{},taskStatus:{},taskOrder:{},hiddenProps:[],updates:[{id:uid(),text:'Dashboard BRUX iniciado.',ts:Date.now()}],_ts:Date.now()};
+  return{tasks,notes:{},propNotes:{},customTasks:[],customProps:[],customProjects:[],archivedProjects:[],projectAlerts:{},projectMilestones:{},taskComments:{},taskStatus:{},taskOrder:{},hiddenProps:[],postits:[],updates:[{id:uid(),text:'Dashboard BRUX iniciado.',ts:Date.now()}],_ts:Date.now()};
 }
 
 async function save(msg){
@@ -636,6 +665,7 @@ function buildHTML(){
     +'</div>'
     +'<div class="tabs-sep"></div>'
     +'<div class="tabs-views">'
+    +'<button class="tab tab-view '+(V==='mural'?'act':'')+'" onclick="B.sv(\'mural\')">📌 Mural</button>'
     +'<button class="tab tab-view '+(V==='timeline'?'act':'')+'" onclick="B.sv(\'timeline\')">Timeline</button>'
     +'<button class="tab tab-view '+(V==='arch'?'act':'')+'" onclick="B.sv(\'arch\')">Histórico</button>'
     +'<button class="tab tab-view '+(V==='log'?'act':'')+'" onclick="B.sv(\'log\')">Updates</button>'
@@ -678,6 +708,7 @@ function buildHTML(){
     +(S.customProjects||[]).map(p=>buildCustomView(p,allMs)).join('')
     +'<div '+(V==='timeline'?'':'hidden')+'>'+buildTimeline(allMs)+'</div>'
     +'<div '+(V==='arch'?'':'hidden')+'>'+buildArchive()+'</div>'
+    +'<div '+(V==='mural'?'':'hidden')+'>'+buildMural()+'</div>'
     +'<div '+(V==='log'?'':'hidden')+'>'
     +'<div class="sec">Atualizações</div>'
     +'<div class="upd-log">'+[...(S.updates||[])].reverse().map(u=>'<div class="upd-entry">'+esc(u.text)+'<div class="upd-meta">'+ts(u.ts)+'</div></div>').join('')+'</div>'
@@ -956,6 +987,28 @@ function buildCustomView(p,allMs){
     +(pend.length?'<div class="sec">Tarefas pendentes</div><div class="task-list">'+pend.map(t=>buildTask(t)).join('')+'</div>':'<p class="empty">Nenhuma tarefa pendente.</p>')
     +(done.length?'<button class="done-tog" onclick="B.toggleDR(\''+p.id+'\')">'+(showDR[p.id]?'▾':'▸')+' concluídas ('+done.length+')</button>'+(showDR[p.id]?'<div class="task-list" style="margin-top:8px">'+done.map(t=>buildTask(t)).join('')+'</div>':''):'')
     +'</div>';
+}
+
+function buildMural(){
+  const postits=S.postits||[];
+  // project filter options
+  const projOpts=[{id:'all',label:'Todos'}];
+  projOpts.push({id:'n',label:'🌿 Natura'},{id:'r',label:'✦ Riachuelo'});
+  (S.customProjects||[]).forEach(p=>projOpts.push({id:p.id,label:(p.emoji||'📁')+' '+p.name}));
+
+  const filterBtns=projOpts.map(o=>'<button class="mural-filter-btn '+(muralFilter===o.id?'act':'')+'" onclick="B.setMuralFilter(\''+o.id+'\')">'+o.label+'</button>').join('');
+
+  const filtered=muralFilter==='all'?postits:postits.filter(p=>p.proj===muralFilter);
+
+  const cards=filtered.length?filtered.slice().reverse().map((p,i)=>{
+    const rot=['rotate(-1.5deg)', 'rotate(1deg)', 'rotate(-0.8deg)', 'rotate(1.8deg)', 'rotate(-1.2deg)', 'rotate(0.7deg)'][i%6];
+    const d=new Date(p.createdAt);
+    const dateStr=d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})+' '+d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+    const projLabel=p.proj==='n'?'Natura':p.proj==='r'?'Riachuelo':((S.customProjects||[]).find(cp=>cp.id===p.proj)||{}).name||'';
+    return'<div class="postit" id="pit-'+p.id+'" draggable="true" style="background:'+p.color+';transform:'+rot+'" ondragstart="B.pitDs(event,this)" ondragover="B.pitDov(event,this)" ondragleave="B.pitDl(event,this)" ondrop="B.pitDd(event,this)">'        +'<div class="postit-emoji">'+p.emoji+'</div>'      +'<div class="postit-text">'+esc(p.text)+'</div>'      +'<div class="postit-meta">'      +'<div><div class="postit-author">'+esc(p.author)+'</div>'      +(projLabel?'<div class="postit-proj">'+esc(projLabel)+'</div>':'')      +'<div class="postit-date">'+dateStr+'</div></div>'      +'<button class="postit-del" onclick="B.delPostit(\''+p.id+'\')">✕</button>'      +'</div></div>';
+  }).join(''):'<div class="mural-empty"><div class="mural-empty-icon">📌</div><div>Nenhuma nota ainda.<br>Crie a primeira!</div></div>';
+
+  return'<div class="mural-wrap">'    +'<div class="mural-toolbar">'    +'<div class="mural-filter">'+filterBtns+'</div>'    +'<button class="mural-add-btn" onclick="B.openAddPostit()">+ nova nota</button>'    +'</div>'    +'<div class="postit-grid">'+cards+'</div>'    +'</div>';
 }
 
 function buildArchive(){
@@ -1326,6 +1379,87 @@ B.permDel=async function(id){
   if(!arch||!confirm('Apagar permanentemente "'+arch.name+'"?\n\nEsta ação NÃO pode ser desfeita.'))return;
   S.archivedProjects=S.archivedProjects.filter(p=>p.id!==id);
   await save('Projeto apagado permanentemente');render();
+};
+
+// ── mural de post-its ─────────────────────────────────────────────────────────
+const POSTIT_COLORS=[
+  {bg:'#FFF9C4',name:'amarelo'},{bg:'#FCE4EC',name:'rosa'},
+  {bg:'#E8F5E9',name:'verde'},{bg:'#E3F2FD',name:'azul'},
+  {bg:'#F3E5F5',name:'lilás'},{bg:'#FFF3E0',name:'laranja'},
+  {bg:'#F1F8E9',name:'menta'},{bg:'#FFF8E1',name:'creme'},
+];
+const POSTIT_EMOJIS=['💡','⚡','🎯','📌','🔥','✨','💬','🚀','📝','🌿','💭','⭐'];
+
+B.setMuralFilter=function(f){muralFilter=f;render();};
+
+B.openAddPostit=function(){
+  const colorSwatches=POSTIT_COLORS.map((c,i)=>'<div style="width:28px;height:28px;border-radius:50%;background:'+c.bg+';cursor:pointer;border:2px solid '+(i===0?'var(--tx)':'transparent')+';transition:border-color .15s;" onclick="B.pickPostitColor(\''+c.bg+'\',this)" data-c="'+c.bg+'" title="'+c.name+'"></div>').join('');
+  const emojiPicker=POSTIT_EMOJIS.map((e,i)=>'<button style="font-size:20px;background:none;border:1.5px solid '+(i===0?'var(--tx)':'var(--bd)')+';border-radius:6px;padding:3px 6px;cursor:pointer;" onclick="B.pickPostitEmoji(\''+e+'\',this)" data-e="'+e+'">'+e+'</button>').join('');
+  const projOpts='<option value="none">— sem projeto —</option>'
+    +'<option value="n">🌿 Natura MMBB</option>'
+    +'<option value="r">✦ Riachuelo</option>'
+    +(S.customProjects||[]).map(p=>'<option value="'+p.id+'">'+( p.emoji||'📁')+' '+esc(p.name)+'</option>').join('');
+  showModal('<div class="modal-ov" onclick="if(event.target===this)B.closeModal()">'    +'<div class="modal"><div class="modal-drag"></div><h3>Nova nota no mural</h3>'    +'<div class="mf"><label class="ml">Emoji</label><div class="ew" id="pit-em">'+emojiPicker+'</div></div>'    +'<div class="mf"><label class="ml">Cor</label><div style="display:flex;gap:8px;flex-wrap:wrap" id="pit-cl">'+colorSwatches+'</div></div>'    +'<div class="mf"><label class="ml" for="pit-txt">Nota</label><textarea class="mi" id="pit-txt" rows="4" placeholder="Escreva sua nota..." style="resize:none;line-height:1.55;"></textarea></div>'    +'<div class="mf"><label class="ml" for="pit-au">Autor</label><select class="msel" id="pit-au"><option>Bru</option><option>Laura</option><option>Lele</option></select></div>'    +'<div class="mf"><label class="ml" for="pit-proj">Projeto</label><select class="msel" id="pit-proj">'+projOpts+'</select></div>'    +'<div class="merr" id="pit-e"></div>'    +'<div class="ma"><button class="mc" onclick="B.closeModal()">Cancelar</button>'    +'<button class="mok" style="background:var(--tx)" onclick="B.confirmPostit()">Adicionar</button>'    +'</div></div></div>');
+  setTimeout(()=>{const el=document.getElementById('pit-txt');if(el)el.focus();},80);
+};
+
+B.pickPostitColor=function(c,el){
+  document.querySelectorAll('#pit-cl div').forEach(d=>d.style.borderColor='transparent');
+  el.style.borderColor='var(--tx)';
+};
+B.pickPostitEmoji=function(e,el){
+  document.querySelectorAll('#pit-em button').forEach(b=>b.style.borderColor='var(--bd)');
+  el.style.borderColor='var(--tx)';
+};
+
+B.confirmPostit=async function(){
+  const text=document.getElementById('pit-txt').value.trim();
+  if(!text){document.getElementById('pit-e').textContent='Escreva alguma coisa.';return;}
+  const selColor=document.querySelector('#pit-cl div[style*="var(--tx)"]');
+  const color=selColor?selColor.dataset.c:POSTIT_COLORS[0].bg;
+  const selEmoji=document.querySelector('#pit-em button[style*="var(--tx)"]');
+  const emoji=selEmoji?selEmoji.dataset.e:POSTIT_EMOJIS[0];
+  const author=document.getElementById('pit-au').value;
+  const proj=document.getElementById('pit-proj').value;
+  if(!Array.isArray(S.postits))S.postits=[];
+  S.postits.push({id:uid(),text,emoji,color,author,proj:proj==='none'?null:proj,createdAt:Date.now()});
+  S.updates=S.updates||[];
+  S.updates.push({id:uid(),text:author+' adicionou nota no mural: "'+text.slice(0,40)+(text.length>40?'…':'')+'"',ts:Date.now()});
+  B.closeModal();await save('Nota adicionada ✓');render();
+};
+
+B.delPostit=async function(id){
+  S.postits=(S.postits||[]).filter(p=>p.id!==id);
+  await save('Nota removida');render();
+};
+
+// ── postit drag & drop reorder ─────────────────────────────────────────────
+let pitDragId=null;
+B.pitDs=function(e,el){
+  pitDragId=el.id.replace('pit-','');
+  e.dataTransfer.effectAllowed='move';
+  setTimeout(function(){el.classList.add('pit-dragging');},0);
+};
+B.pitDov=function(e,el){
+  e.preventDefault();
+  document.querySelectorAll('.pit-over').forEach(function(x){x.classList.remove('pit-over');});
+  if(el.id!=='pit-'+pitDragId)el.classList.add('pit-over');
+};
+B.pitDl=function(e,el){el.classList.remove('pit-over');};
+B.pitDd=async function(e,el){
+  e.preventDefault();
+  document.querySelectorAll('.pit-over,.pit-dragging').forEach(function(x){x.classList.remove('pit-over','pit-dragging');});
+  const targetId=el.id.replace('pit-','');
+  if(!pitDragId||pitDragId===targetId)return;
+  const pits=Array.from(S.postits||[]);
+  const fromIdx=pits.findIndex(function(p){return p.id===pitDragId;});
+  const toIdx=pits.findIndex(function(p){return p.id===targetId;});
+  if(fromIdx<0||toIdx<0)return;
+  const item=pits.splice(fromIdx,1)[0];
+  pits.splice(toIdx,0,item);
+  S.postits=pits;
+  pitDragId=null;
+  await save();render();
 };
 
 let dragId=null;
