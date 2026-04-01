@@ -1336,6 +1336,275 @@ function doArchive(id,name,emoji,color,fixed){
   S.updates.push({id:uid(),text:'Projeto arquivado: '+(emoji||'')+' '+name,ts:Date.now()});
   if(V===id)V='arch';
 }
+
+const B=window.B={};
+
+// ── core navigation & toggles ────────────────────────────────────────────────
+B.sv=function(v){V=v;render();window.scrollTo(0,0);};
+B.toggleDN=function(){showDN=!showDN;render();};
+B.toggleDR=function(id){id=id||'r';showDR[id]=!showDR[id];render();};
+
+B.toggleTask=async function(id,proj){
+  const cust=(S.customTasks||[]).find(t=>t.id===id);
+  if(cust)cust.done=!cust.done;
+  else{if(!S.tasks[id])return;S.tasks[id].done=!S.tasks[id].done;}
+  const done=cust?cust.done:S.tasks[id].done;
+  const item=document.getElementById('ti-'+id),cb=document.getElementById('cb-'+id);
+  if(item)item.classList.toggle('done',done);
+  if(cb){cb.className='cb'+(done?(proj==='n'?' on-n':' on-r'):'');cb.setAttribute('aria-checked',String(done));}
+  await save(done?'Tarefa concluída ✓':'Tarefa reaberta');
+  setTimeout(render,350);
+};
+
+B.setStatus=async function(id,sel){
+  if(!S.taskStatus)S.taskStatus={};
+  S.taskStatus[id]=sel.value;
+  Object.values(SM).forEach(v=>sel.classList.remove(v.cls));
+  sel.classList.add((SM[sel.value]||SM.and).cls);
+  const item=document.getElementById('ti-'+id);
+  if(item){
+    ['st-atr','st-pri','st-agu','st-ibs','st-pau'].forEach(c=>item.classList.remove(c));
+    const acc={'atr':'st-atr','pri':'st-pri','agu':'st-agu','ibs':'st-ibs','pau':'st-pau'}[sel.value];
+    if(acc)item.classList.add(acc);
+  }
+  await save('Status atualizado');
+  setTimeout(render,400);
+};
+
+// ── comments ──────────────────────────────────────────────────────────────────
+B.toggleCmt=function(id){
+  EC[id]=!EC[id];
+  const wrap=document.getElementById('cmt-'+id);
+  const btn=document.getElementById('expbtn-'+id);
+  if(wrap){
+    if(EC[id]&&wrap.innerHTML===''){wrap.innerHTML=buildCmts(id);attachEv();}
+    wrap.hidden=!EC[id];
+  }
+  if(btn){
+    const cmts=(S.taskComments||{})[id]||[];
+    const cnt=cmts.length;
+    btn.textContent=EC[id]?'▴ fechar':'▾ '+(cnt?cnt+' comentário'+(cnt>1?'s':''):'comentários');
+    btn.className=cnt&&!EC[id]?'exp-btn has-c':'exp-btn';
+  }
+};
+B.addCmt=async function(taskId){
+  const el=document.getElementById('nc-'+taskId);
+  if(!el||!el.value.trim())return;
+  if(!S.taskComments)S.taskComments={};
+  if(!S.taskComments[taskId])S.taskComments[taskId]=[];
+  S.taskComments[taskId].push({id:uid(),text:el.value.trim(),ts:Date.now(),edited:false});
+  el.value='';el.style.height='auto';
+  await save('Comentário salvo ✓');
+  const wrap=document.getElementById('cmt-'+taskId);
+  if(wrap){wrap.innerHTML=buildCmts(taskId);attachEv();}
+  const btn=document.getElementById('expbtn-'+taskId);
+  if(btn){const cnt=S.taskComments[taskId].length;btn.textContent='▴ fechar';btn.className='exp-btn has-c';}
+};
+B.delCmt=async function(taskId,cId){
+  if(!S.taskComments||!S.taskComments[taskId])return;
+  S.taskComments[taskId]=S.taskComments[taskId].filter(c=>c.id!==cId);
+  await save('Comentário removido');
+  const wrap=document.getElementById('cmt-'+taskId);
+  if(wrap){wrap.innerHTML=buildCmts(taskId);attachEv();}
+  const btn=document.getElementById('expbtn-'+taskId);
+  if(btn){const cnt=(S.taskComments[taskId]||[]).length;btn.textContent=EC[taskId]?'▴ fechar':'▾ '+(cnt?cnt+' comentário'+(cnt>1?'s':''):'comentários');btn.className=cnt?'exp-btn has-c':'exp-btn';}
+};
+B.editCmt=function(taskId,cId){
+  const el=document.getElementById('ct-'+cId);if(!el)return;
+  const orig=el.textContent;
+  const inp=document.createElement('textarea');
+  inp.className='cmt-edit-inp';inp.value=orig;inp.rows=2;
+  el.replaceWith(inp);inp.focus();
+  inp.addEventListener('blur',async function(){
+    const txt=inp.value.trim()||orig;
+    const c=(S.taskComments[taskId]||[]).find(x=>x.id===cId);
+    if(c){c.text=txt;c.edited=true;}
+    await save('Comentário editado');
+    const wrap=document.getElementById('cmt-'+taskId);
+    if(wrap){wrap.innerHTML=buildCmts(taskId);attachEv();}
+  });
+};
+
+// ── alerts ────────────────────────────────────────────────────────────────────
+B.saveAlert=async function(proj,idx,val){
+  if(!S.projectAlerts)S.projectAlerts={};
+  if(!S.projectAlerts[proj])S.projectAlerts[proj]=[...(DA[proj]||[])];
+  if(S.projectAlerts[proj][idx])S.projectAlerts[proj][idx].text=val;
+  await save('Alerta salvo ✓');
+};
+B.delAlert=async function(proj,idx){
+  if(!S.projectAlerts)S.projectAlerts={};
+  if(!S.projectAlerts[proj])S.projectAlerts[proj]=[...(DA[proj]||[])];
+  S.projectAlerts[proj].splice(idx,1);
+  await save('Alerta removido');render();
+};
+B.addAlert=async function(proj){
+  if(!S.projectAlerts)S.projectAlerts={};
+  if(!S.projectAlerts[proj])S.projectAlerts[proj]=[...(DA[proj]||[])];
+  S.projectAlerts[proj].push({id:uid(),type:'amber',text:'Novo alerta — clique para editar'});
+  await save();render();
+};
+
+// ── proposals ─────────────────────────────────────────────────────────────────
+B.savePropNote=async function(key,val,sid){
+  if(!S.propNotes)S.propNotes={};S.propNotes[key]=val;
+  await save();
+  const el=document.getElementById(sid);
+  if(el){el.style.opacity='1';setTimeout(()=>el.style.opacity='0',2000);}
+};
+B.delProp=async function(key,isCustom){
+  if(!confirm('Remover esta proposta?'))return;
+  if(isCustom===true||String(isCustom)==='true'){
+    S.customProps=(S.customProps||[]).filter(p=>p.id!==key);
+    if(S.propNotes)delete S.propNotes[key];
+  }else{
+    if(!Array.isArray(S.hiddenProps))S.hiddenProps=[];
+    if(!S.hiddenProps.includes(key))S.hiddenProps.push(key);
+  }
+  await save('Proposta removida');render();
+};
+
+// ── milestones ────────────────────────────────────────────────────────────────
+B.openAddMilestone=function(projId){
+  showModal('<div class="modal-ov" onclick="if(event.target===this)B.closeModal()">'
+    +'<div class="modal"><div class="modal-drag"></div><h3>Novo milestone</h3>'
+    +'<input type="hidden" id="mm-proj" value="'+esc(projId)+'">'
+    +'<div class="mf"><label class="ml" for="mm-l">Descrição</label><input class="mi" id="mm-l" placeholder="Ex: Apresentação para cliente"/></div>'
+    +'<div class="mf"><label class="ml" for="mm-d">Data (dd/mm)</label><input class="mi" id="mm-d" placeholder="Ex: 20/05" inputmode="numeric"/></div>'
+    +'<div class="merr" id="mm-e"></div>'
+    +'<div class="ma"><button class="mc" onclick="B.closeModal()">Cancelar</button>'
+    +'<button class="mok" style="background:var(--n)" onclick="B.confirmMilestone()">Adicionar</button>'
+    +'</div></div></div>');
+  setTimeout(function(){const el=document.getElementById('mm-l');if(el)el.focus();},30);
+};
+B.confirmMilestone=async function(){
+  const projId=(document.getElementById('mm-proj')||{value:''}).value;
+  const label=(document.getElementById('mm-l')||{value:''}).value.trim();
+  const date=(document.getElementById('mm-d')||{value:''}).value.trim();
+  if(!label){const e=document.getElementById('mm-e');if(e)e.textContent='Descreva o milestone.';return;}
+  if(!projId){return;}
+  if(!S.projectMilestones)S.projectMilestones={};
+  if(!S.projectMilestones[projId])S.projectMilestones[projId]=[];
+  S.projectMilestones[projId].push({id:uid(),label,date:date||'a definir',ts:Date.now()});
+  B.closeModal();await save('Milestone adicionado ✓');render();
+};
+B.delMilestone=async function(projId,msId){
+  if(!S.projectMilestones||!S.projectMilestones[projId])return;
+  S.projectMilestones[projId]=S.projectMilestones[projId].filter(m=>m.id!==msId);
+  await save('Milestone removido');render();
+};
+
+// ── tasks ─────────────────────────────────────────────────────────────────────
+B.openAddTask=function(proj){
+  const cp=(S.customProjects||[]).find(p=>p.id===proj);
+  const label=proj==='n'?'Natura MMBB':proj==='r'?'Riachuelo':(cp?cp.name:proj);
+  const clr=proj==='n'?'#0F6E56':proj==='r'?'#533AB7':(cp?cp.color:'#0F6E56');
+  showModal('<div class="modal-ov" onclick="if(event.target===this)B.closeModal()">'
+    +'<div class="modal"><div class="modal-drag"></div><h3>Nova tarefa — '+esc(label)+'</h3>'
+    +'<input type="hidden" id="at-proj" value="'+esc(proj)+'">'
+    +'<div class="mf"><label class="ml" for="mt-t">Tarefa</label><input class="mi" id="mt-t" placeholder="Descreva a tarefa..."/></div>'
+    +'<div class="mf"><label class="ml" for="mt-w">Responsável</label>'
+    +'<select class="msel" id="mt-w"><option>Bru</option><option>Laura</option><option>Lele</option><option>Bru + Lele</option><option>Laura + Lele</option><option>Bru + Laura</option><option>ALL</option></select></div>'
+    +'<div class="mf"><label class="ml" for="mt-d">Deadline</label><input class="mi" id="mt-d" placeholder="ex: 05/04" inputmode="numeric"/></div>'
+    +'<div class="mf"><label class="ml" for="mt-p">Status inicial</label>'
+    +'<select class="msel" id="mt-p"><option value="and">🟢 em andamento</option><option value="ibs">🔵 início em breve</option><option value="agu">🟡 aguardando info</option><option value="pri">🟠 prioridade total</option><option value="atr">🔴 atrasada</option><option value="pau">⚪ pausada</option></select></div>'
+    +'<div class="mf"><label class="ml" for="mt-b">Adicionado por</label>'
+    +'<select class="msel" id="mt-b"><option>Bru</option><option>Laura</option><option>Lele</option></select></div>'
+    +'<div class="merr" id="mt-e"></div>'
+    +'<div class="ma"><button class="mc" onclick="B.closeModal()">Cancelar</button>'
+    +'<button class="mok" style="background:'+clr+'" onclick="B.confirmTask()">Adicionar</button>'
+    +'</div></div></div>');
+  setTimeout(function(){const el=document.getElementById('mt-t');if(el)el.focus();},30);
+};
+B.confirmTask=async function(){
+  const proj=(document.getElementById('at-proj')||{value:''}).value;
+  const titleEl=document.getElementById('mt-t');
+  const title=titleEl?titleEl.value.trim():'';
+  if(!title){const e=document.getElementById('mt-e');if(e)e.textContent='Descreva a tarefa.';return;}
+  const who=(document.getElementById('mt-w')||{value:'Bru'}).value;
+  const date=(document.getElementById('mt-d')||{value:''}).value.trim();
+  const statusVal=(document.getElementById('mt-p')||{value:'and'}).value;
+  const by=(document.getElementById('mt-b')||{value:'Bru'}).value;
+  const taskId=uid();
+  const task={id:taskId,p:proj,title,who,date:date||'a definir',pri:2,addedBy:by,done:false,custom:true,ts:Date.now()};
+  if(!S.customTasks)S.customTasks=[];
+  S.customTasks.push(task);
+  if(!S.taskStatus)S.taskStatus={};
+  S.taskStatus[taskId]=statusVal;
+  S.updates=S.updates||[];
+  S.updates.push({id:uid(),text:by+' adicionou: "'+title+'" ['+(SM[statusVal]||SM.and).label+']',ts:Date.now()});
+  B.closeModal();await save('Tarefa adicionada ✓');render();
+};
+B.delTask=async function(id){
+  if(!confirm('Remover esta tarefa?'))return;
+  S.customTasks=(S.customTasks||[]).filter(t=>t.id!==id);
+  await save('Tarefa removida');render();
+};
+
+// ── proposals ─────────────────────────────────────────────────────────────────
+B.openAddProp=function(){
+  showModal('<div class="modal-ov" onclick="if(event.target===this)B.closeModal()">'
+    +'<div class="modal"><div class="modal-drag"></div><h3>Nova proposta</h3>'
+    +'<div class="mf"><label class="ml" for="mp-n">Nome</label><input class="mi" id="mp-n" placeholder="Ex: Projeto Boticário"/></div>'
+    +'<div class="merr" id="mp-e"></div>'
+    +'<div class="ma"><button class="mc" onclick="B.closeModal()">Cancelar</button>'
+    +'<button class="mok" style="background:var(--p)" onclick="B.confirmProp()">Adicionar</button>'
+    +'</div></div></div>');
+  setTimeout(function(){const el=document.getElementById('mp-n');if(el)el.focus();},30);
+};
+B.confirmProp=async function(){
+  const name=(document.getElementById('mp-n')||{value:''}).value.trim();
+  if(!name){const e=document.getElementById('mp-e');if(e)e.textContent='Dê um nome.';return;}
+  if(!Array.isArray(S.customProps))S.customProps=[];
+  S.customProps.push({id:uid(),name,ts:Date.now()});
+  B.closeModal();await save('Proposta adicionada ✓');render();
+};
+
+// ── projects ──────────────────────────────────────────────────────────────────
+B.openAddProject=function(){
+  const sw=PC.map((c,i)=>'<div class="'+(i===0?'sel':'')+'" style="background:'+c+'" onclick="B.pickColor(\''+c+'\',this)" data-c="'+c+'"></div>').join('');
+  const em=PE.map(e=>'<button onclick="B.pickEmoji(\''+e+'\',this)" data-e="'+e+'">'+e+'</button>').join('');
+  showModal('<div class="modal-ov" onclick="if(event.target===this)B.closeModal()">'
+    +'<div class="modal"><div class="modal-drag"></div><h3>Novo projeto</h3>'
+    +'<div class="mf"><label class="ml" for="np-n">Nome</label><input class="mi" id="np-n" placeholder="Ex: Boticário, OLX..."/></div>'
+    +'<div class="mf"><label class="ml">Ícone</label><div class="ew" id="np-em">'+em+'</div></div>'
+    +'<div class="mf"><label class="ml">Cor</label><div class="csw" id="np-cl">'+sw+'</div></div>'
+    +'<div class="mf"><label class="ml" for="np-ml">Próximo milestone</label><input class="mi" id="np-ml" placeholder="Ex: Apresentação para cliente"/></div>'
+    +'<div class="mf"><label class="ml" for="np-md">Data (dd/mm)</label><input class="mi" id="np-md" placeholder="Ex: 15/05" inputmode="numeric"/></div>'
+    +'<div class="merr" id="np-e"></div>'
+    +'<div class="ma"><button class="mc" onclick="B.closeModal()">Cancelar</button>'
+    +'<button class="mok" id="np-ok" style="background:'+PC[0]+'" onclick="B.confirmProject()">Criar projeto</button>'
+    +'</div></div></div>');
+  setTimeout(function(){const el=document.getElementById('np-n');if(el)el.focus();},30);
+};
+B.pickColor=function(c,el){
+  document.querySelectorAll('#np-cl div').forEach(s=>s.classList.remove('sel'));
+  el.classList.add('sel');
+  const btn=document.getElementById('np-ok');if(btn)btn.style.background=c;
+};
+B.pickEmoji=function(e,el){
+  document.querySelectorAll('#np-em button').forEach(b=>b.classList.remove('sel'));
+  el.classList.add('sel');
+};
+B.confirmProject=async function(){
+  const name=(document.getElementById('np-n')||{value:''}).value.trim();
+  if(!name){const e=document.getElementById('np-e');if(e)e.textContent='Dê um nome ao projeto.';return;}
+  const color=document.querySelector('#np-cl div.sel')?.dataset.c||PC[0];
+  const emojiEl=document.querySelector('#np-em button.sel');
+  const emoji=emojiEl?emojiEl.dataset.e:'📁';
+  const msLabel=(document.getElementById('np-ml')||{value:''}).value.trim();
+  const msRaw=(document.getElementById('np-md')||{value:''}).value.trim();
+  let milestoneDate=null;
+  if(msRaw){const pt=msRaw.split('/').map(Number);if(pt.length===2&&pt[0]&&pt[1])milestoneDate=new Date(2026,pt[1]-1,pt[0]).toISOString();}
+  const proj={id:uid(),name,color,emoji,milestoneLabel:msLabel||null,milestoneDate,ts:Date.now()};
+  if(!Array.isArray(S.customProjects))S.customProjects=[];
+  S.customProjects.push(proj);
+  S.updates=S.updates||[];
+  S.updates.push({id:uid(),text:'Novo projeto: '+emoji+' '+name,ts:Date.now()});
+  B.closeModal();await save('Projeto criado ✓');render();
+  setTimeout(()=>B.sv(proj.id),100);
+};
+
 B.archiveProject=async function(id){
   const proj=(S.customProjects||[]).find(p=>p.id===id);
   if(!proj||!confirm('Arquivar "'+proj.name+'"? Você poderá restaurar depois.'))return;
