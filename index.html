@@ -386,6 +386,36 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--tx);min-h
 .drive-chip:hover{color:var(--tx2);border-color:var(--bds);background:var(--surf);}
 .drive-chip.add{color:var(--tx3);border-style:dashed;}
 .drive-chip.add:hover{color:var(--n);border-color:var(--n);}
+
+/* ── Gantt timeline ─────────────────────────────────────────────────────────── */
+.gantt-wrap{overflow-x:auto;padding-bottom:12px;}
+.gantt-wrap::-webkit-scrollbar{height:5px;}
+.gantt-wrap::-webkit-scrollbar-thumb{background:var(--bd);border-radius:3px;}
+.gantt-inner{min-width:700px;position:relative;font-family:'DM Sans',sans-serif;}
+.gantt-legend{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px;align-items:center;}
+.gantt-li{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--tx2);}
+.gantt-li-ms{width:10px;height:10px;transform:rotate(45deg);border-radius:1px;flex-shrink:0;}
+.gantt-li-bar{width:20px;height:8px;border-radius:3px;flex-shrink:0;}
+.gantt-li-today{width:2px;height:14px;background:var(--urg);flex-shrink:0;}
+.gantt-head{display:flex;margin-left:120px;border-bottom:1px solid var(--bd);margin-bottom:0;}
+.gantt-month{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--tx3);padding:0 0 6px 6px;border-left:1px solid var(--bd);}
+.gantt-ticks{display:flex;margin-left:120px;margin-bottom:4px;}
+.gantt-tick{border-left:1px solid var(--bd);opacity:.35;height:4px;}
+.gantt-row{display:flex;align-items:center;margin-bottom:2px;min-height:44px;}
+.gantt-row-label{width:120px;flex-shrink:0;padding-right:12px;text-align:right;}
+.gantt-row-label-name{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.gantt-row-lane{flex:1;position:relative;height:44px;}
+.gantt-row-sep{margin-left:120px;height:1px;background:var(--bd);opacity:.4;margin-bottom:2px;}
+.gantt-bar{position:absolute;height:10px;border-radius:3px;top:17px;min-width:4px;cursor:default;transition:opacity .15s;}
+.gantt-bar:hover{opacity:.78;}
+.gantt-bar.done{opacity:.3;}
+.gantt-diamond{position:absolute;width:10px;height:10px;transform:rotate(45deg);border-radius:1.5px;top:17px;margin-left:-5px;cursor:default;transition:opacity .15s;}
+.gantt-diamond:hover{opacity:.75;}
+.gantt-diamond.done{opacity:.3;}
+.gantt-label{position:absolute;font-size:9px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;top:30px;max-width:90px;line-height:1.2;}
+.gantt-today-line{position:absolute;top:0;bottom:0;width:1.5px;background:var(--urg);z-index:10;pointer-events:none;}
+.gantt-today-tip{position:absolute;top:-16px;left:50%;transform:translateX(-50%);font-size:9px;color:var(--urg);font-weight:700;white-space:nowrap;}
+.gantt-empty{text-align:center;padding:40px;color:var(--tx3);font-size:13px;}
 </style>
 </head>
 <body>
@@ -1094,6 +1124,61 @@ function buildArchive(){
 }
 
 
+
+
+// ── Drive link chip ───────────────────────────────────────────────────────────
+function buildDriveChip(projId){
+  // projId can be 'n', 'r', or a custom project id
+  const url=(S.driveLinks||{})[projId]||'';
+  if(url){
+    return'<a class="drive-chip" href="'+esc(url)+'" target="_blank" rel="noopener" aria-label="Abrir pasta do projeto no Google Drive">📁 pasta do projeto ↗</a>';
+  }
+  return'<button class="drive-chip add" onclick="B.openDriveEdit(\''+projId+'\')" aria-label="Adicionar link da pasta do projeto">+ adicionar pasta</button>';
+}
+
+function buildMural(){
+  const postits=S.postits||[];
+  // project filter options
+  const projOpts=[{id:'all',label:'Todos'}];
+  projOpts.push({id:'n',label:'🌿 Natura'},{id:'r',label:'✦ Riachuelo'});
+  (S.customProjects||[]).forEach(p=>projOpts.push({id:p.id,label:(p.emoji||'📁')+' '+p.name}));
+
+  const filterBtns=projOpts.map(o=>'<button class="mural-filter-btn '+(muralFilter===o.id?'act':'')+'" onclick="B.setMuralFilter(\''+o.id+'\')">'+o.label+'</button>').join('');
+
+  const filtered=muralFilter==='all'?postits:postits.filter(p=>p.proj===muralFilter);
+
+  const cards=filtered.length?filtered.slice().reverse().map((p,i)=>{
+    const rot=['rotate(-1.5deg)', 'rotate(1deg)', 'rotate(-0.8deg)', 'rotate(1.8deg)', 'rotate(-1.2deg)', 'rotate(0.7deg)'][i%6];
+    const d=new Date(p.createdAt);
+    const dateStr=d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})+' '+d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+    const projLabel=p.proj==='n'?'Natura':p.proj==='r'?'Riachuelo':((S.customProjects||[]).find(cp=>cp.id===p.proj)||{}).name||'';
+    return'<div class="postit" id="pit-'+p.id+'" draggable="true" style="background:'+p.color+';transform:'+rot+'" ondragstart="B.pitDs(event,this)" ondragover="B.pitDov(event,this)" ondragleave="B.pitDl(event,this)" ondrop="B.pitDd(event,this)">'        +'<div class="postit-emoji">'+p.emoji+'</div>'      +'<div class="postit-text">'+esc(p.text)+'</div>'      +'<div class="postit-meta">'      +'<div><div class="postit-author">'+esc(p.author)+'</div>'      +(projLabel?'<div class="postit-proj">'+esc(projLabel)+'</div>':'')      +'<div class="postit-date">'+dateStr+'</div></div>'      +'<button class="postit-del" onclick="B.delPostit(\''+p.id+'\')">✕</button>'      +'</div></div>';
+  }).join(''):'<div class="mural-empty"><div class="mural-empty-icon">📌</div><div>Nenhuma nota ainda.<br>Crie a primeira!</div></div>';
+
+  return'<div class="mural-wrap">'    +'<div class="mural-toolbar">'    +'<div class="mural-filter">'+filterBtns+'</div>'    +'<button class="mural-add-btn" onclick="B.openAddPostit()">+ nova nota</button>'    +'</div>'    +'<div class="postit-grid">'+cards+'</div>'    +'</div>';
+}
+
+function buildArchive(){
+  const arch=S.archivedProjects||[];
+  if(!arch.length)return'<p class="empty" style="padding:32px 0">Nenhum projeto arquivado ainda.</p>';
+  return arch.map(p=>{
+    const tasks=p.tasks||[],ms=p.milestones||[],doneC=tasks.filter(t=>t.done).length,c=p.color||'var(--tx)';
+    return'<div class="arch-card"><div class="arch-hdr">'
+      +(p.emoji?'<span style="font-size:18px">'+p.emoji+'</span>':'')
+      +'<div class="arch-name" style="color:'+c+'">'+esc(p.name)+'</div>'
+      +'<span class="arch-ts">Arquivado '+ts(p.archivedAt)+'</span>'
+      +'<div class="arch-btns">'
+      +'<button class="arch-btn arch-restore" onclick="B.restoreProject(\''+p.id+'\')">↩ Restaurar</button>'
+      +'<button class="arch-btn arch-del" onclick="B.permDel(\''+p.id+'\')">🗑 Apagar</button>'
+      +'</div></div>'
+      +(ms.length?'<div class="arch-sec">Milestones</div>'+ms.map(m=>'<div style="font-size:13px;color:var(--tx2);padding:3px 0">◆ '+esc(m.label)+' — '+esc(m.date)+'</div>').join(''):'')
+      +'<div class="arch-sec">Tarefas ('+doneC+'/'+tasks.length+')</div>'
+      +tasks.map(t=>'<div class="arch-task '+(t.done?'dd':'')+'">'+(t.done?'✓':'○')+' '+esc(t.title)+'</div>').join('')
+      +'</div>';
+  }).join('');
+}
+
+
 // ── Dynamic timeline conflict detection (refined) ────────────────────────────
 // Rules: only events with relevance>=2, no undefined projectId,
 // grouped alerts (not one per pair), max 5 output, human language
@@ -1129,438 +1214,159 @@ function parseTaskDate(dateStr){
   return null;
 }
 
-function getTimelineEvents(){
-  const events=[];
-  const validProjs=new Set(['n','r',...(S.customProjects||[]).map(p=>p.id)]);
-  const cutoff=new Date(2026,2,25); // ignore tasks before late March
-
-  // Helper: compute relevance
-  function relevance(t,isMilestone){
-    if(isMilestone)return 3;
-    const st=(S.taskStatus||{})[t.id]||'and';
-    if(st==='atr'||st==='pri'||t.pri===0)return 2;
-    return 1;
-  }
-
-  // Tasks (fixed defs)
-  for(const t of TDEFS){
-    if(!validProjs.has(t.p))continue;
-    const r=relevance(t,!!t.milestone);
-    if(r<2)continue; // skip normal tasks
-    const range=parseTaskDate(t.date);
-    if(!range||range.end<cutoff)continue;
-    events.push({id:t.id,projectId:t.p,title:t.title,
-      startDate:range.start,endDate:range.end,relevance:r,milestone:!!t.milestone});
-  }
-  // Custom tasks
-  for(const t of(S.customTasks||[])){
-    if(!t.p||!validProjs.has(t.p))continue;
-    const r=relevance(t,false);
-    if(r<2)continue;
-    const range=parseTaskDate(t.date);
-    if(!range||range.end<cutoff)continue;
-    events.push({id:t.id,projectId:t.p,title:t.title,
-      startDate:range.start,endDate:range.end,relevance:r,milestone:false});
-  }
-  // Milestones — always relevance 3
-  for(const m of getAllMilestones()){
-    if(!m.proj||!validProjs.has(m.proj)||!m.label||!m.date)continue;
-    events.push({id:'ms-'+m.id,projectId:m.proj,title:m.label,
-      startDate:m.date,endDate:m.date,relevance:3,milestone:true});
-  }
-  return events;
-}
-
-function overlaps(a,b){
-  // True if date ranges overlap
-  return a.startDate<=b.endDate&&b.startDate<=a.endDate;
-}
-
-function daysBetween(a,b){
-  // Positive = b comes after a ends; negative = they overlap
-  return Math.round((b.startDate-a.endDate)/86400000);
-}
-
-function projName(id){
-  if(id==='n')return'Natura';
-  if(id==='r')return'Riachuelo';
-  return((S.customProjects||[]).find(p=>p.id===id)||{}).name||'';
-}
-function shortTitle(t){return t.length>45?t.slice(0,43)+'…':t;}
-
-function generateConflicts(events){
-  const horizon=new Date(TODAY.getTime()+90*86400000);
-  const upcoming=events.filter(e=>e.endDate>=TODAY&&e.startDate<=horizon&&e.projectId);
-
-  // Group overlapping windows by time period instead of pairs
-  // Track what pairs we've already reported to avoid repetition
-  const seen=new Set();
-  const raw=[];
-
-  for(let i=0;i<upcoming.length;i++){
-    for(let j=i+1;j<upcoming.length;j++){
-      const a=upcoming[i],b=upcoming[j];
-      if(a.projectId===b.projectId)continue;
-      // Deduplicate by week-window + project pair
-      const weekA=Math.floor((a.startDate-TODAY)/604800000);
-      const pairKey=(a.projectId<b.projectId?a.projectId+'|'+b.projectId:b.projectId+'|'+a.projectId)+'@w'+weekA;
-      if(seen.has(pairKey))continue;
-
-      if(overlaps(a,b)){
-        seen.add(pairKey);
-        const isCrit=a.milestone||b.milestone;
-        const pA=projName(a.projectId),pB=projName(b.projectId);
-        raw.push({
-          type:isCrit?'critical':'parallel',score:isCrit?10:5,
-          title:(isCrit?'⚑ ':'↔ ')+pA+' e '+pB+' em paralelo',
-          text:shortTitle(a.title)+' coincide com '+shortTitle(b.title)+'.',
-        });
-      } else {
-        const gap=daysBetween(a,b);
-        if(gap>=0&&gap<=3){
-          seen.add(pairKey);
-          const pA=projName(a.projectId),pB=projName(b.projectId);
-          raw.push({
-            type:'compression',score:7,
-            title:'⚡ Pouco espaço entre '+pA+' e '+pB,
-            text:shortTitle(a.title)+' termina '+(gap===0?'no mesmo dia que':'apenas '+gap+' dia'+(gap>1?'s':'')+' antes de')+' '+shortTitle(b.title)+'.',
-          });
-        }
-      }
-    }
-  }
-
-  // Concentration: many high-relevance events in same 7-day window
-  const windows={};
-  for(const e of upcoming){
-    const wk=Math.floor((e.startDate-TODAY)/604800000);
-    if(!windows[wk])windows[wk]=[];
-    windows[wk].push(e);
-  }
-  for(const [wk,evs] of Object.entries(windows)){
-    if(evs.length>=3){
-      const projs=[...new Set(evs.map(e=>projName(e.projectId)).filter(Boolean))];
-      if(projs.length>=2){
-        const d=new Date(TODAY.getTime()+parseInt(wk)*604800000);
-        const dateStr=d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
-        raw.push({
-          type:'compression',score:4,
-          title:'📅 Semana intensa a partir de '+dateStr,
-          text:evs.length+' entregas de '+projs.join(', ')+' na mesma semana.',
-        });
-      }
-    }
-  }
-
-  // Sort by score desc, deduplicate similar titles, cap at 5
-  raw.sort((a,b)=>b.score-a.score);
-  const out=[],titlesOut=new Set();
-  for(const a of raw){
-    if(titlesOut.has(a.title))continue;
-    titlesOut.add(a.title);
-    out.push(a);
-    if(out.length>=5)break;
-  }
-  return out;
-}
 
 function buildTimeline(allMs){
-  const TL_START=new Date(2026,2,16),TL_END=new Date(2026,4,31);
-  const TOTAL=Math.round((TL_END-TL_START)/86400000);
-  function pct(d){return(Math.round((d-TL_START)/86400000/TOTAL*10000)/100)+'%';}
-  function pctW(s,e){return(Math.round((e-s)/86400000/TOTAL*10000)/100)+'%';}
-  function D(y,m,d){return new Date(y,m-1,d);}
-  const months=[{name:'março',s:D(2026,3,16),e:new Date(2026,2,31)},{name:'abril',s:D(2026,4,1),e:new Date(2026,3,30)},{name:'maio',s:D(2026,5,1),e:new Date(2026,4,31)}];
-  const moHTML=months.map(m=>'<div class="tl-mo" style="width:'+pctW(m.s,new Date(m.e.getTime()+86400000))+'">'+m.name+'</div>').join('');
-  function makePins(projId){
-    return allMs.filter(m=>m.proj===projId&&m.date>=TL_START&&m.date<=TL_END)
-      .map(m=>'<div class="tl-pin" style="left:'+pct(m.date)+'">'
-        +'<div class="tl-dia" style="background:'+m.color+'"></div>'
-        +'<div class="tl-plbl" style="color:'+m.color+'">'+esc(m.label)+'<br><span style="font-weight:400;opacity:.75">'+m.date.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})+'</span></div>'
-        +'</div>').join('');
+  // ── Collect all projects in display order ───────────────────────────────────
+  const PROJ_DEFS=[
+    {id:'n',label:'Natura MMBB',color:'#0F6E56'},
+    {id:'r',label:'Riachuelo',color:'#534AB7'},
+  ];
+  (S.customProjects||[]).forEach(function(p){
+    PROJ_DEFS.push({id:p.id,label:p.name,color:p.color||'#888'});
+  });
+
+  // ── Collect events using existing parseTaskDate ─────────────────────────────
+  var events=[];
+  var validIds=new Set(PROJ_DEFS.map(function(p){return p.id;}));
+
+  // Tasks from TDEFS
+  TDEFS.forEach(function(t){
+    if(!validIds.has(t.p))return;
+    var r=parseTaskDate(t.date);
+    if(!r)return;
+    events.push({id:t.id,projectId:t.p,title:t.title,type:'task',
+      startDate:r.start,endDate:r.end,done:getDone(t.id),milestone:!!t.milestone});
+  });
+  // Custom tasks
+  (S.customTasks||[]).forEach(function(t){
+    if(!t.p||!validIds.has(t.p))return;
+    var r=parseTaskDate(t.date);
+    if(!r)return;
+    events.push({id:t.id,projectId:t.p,title:t.title,type:'task',
+      startDate:r.start,endDate:r.end,done:!!t.done,milestone:false});
+  });
+  // Milestones — always type milestone
+  allMs.forEach(function(m){
+    if(!m.proj||!validIds.has(m.proj))return;
+    events.push({id:'ms-'+m.id,projectId:m.proj,title:m.label,type:'milestone',
+      startDate:m.date,endDate:m.date,done:false,milestone:true});
+  });
+
+  if(!events.length)return'<p class="gantt-empty">Nenhum item com data encontrado.</p>';
+
+  // ── Compute date window ─────────────────────────────────────────────────────
+  var allDates=events.reduce(function(acc,e){
+    acc.push(e.startDate,e.endDate);return acc;
+  },[TODAY]);
+  var minD=new Date(Math.min.apply(null,allDates));
+  var maxD=new Date(Math.max.apply(null,allDates));
+  // Pad 7 days on each side
+  minD=new Date(minD.getTime()-7*86400000);
+  maxD=new Date(maxD.getTime()+7*86400000);
+  // Snap minD to Monday for cleaner grid
+  minD=new Date(minD.getTime()-(minD.getDay()||7-1)*86400000);
+  var totalDays=Math.round((maxD-minD)/86400000);
+  if(totalDays<1)totalDays=1;
+
+  function pct(d){
+    var days=Math.round((d-minD)/86400000);
+    return Math.max(0,Math.min(100,(days/totalDays*100)));
   }
-  const todayPct=pct(TODAY);
-  const customRows=(S.customProjects||[]).map(cp=>{
-    const pins=makePins(cp.id);if(!pins)return'';
-    return'<div class="tl-sep"></div><div class="tl-row"><div class="tl-lbl" style="color:'+cp.color+'">'+cp.emoji+' '+esc(cp.name)+'</div><div class="tl-lane">'+pins+'</div></div>';
+  function pctW(s,e){
+    var days=Math.max(1,Math.round((e-s)/86400000)+1);
+    return Math.max(0.4,(days/totalDays*100));
+  }
+
+  // ── Month header ────────────────────────────────────────────────────────────
+  var months=[];
+  var cur=new Date(minD.getFullYear(),minD.getMonth(),1);
+  while(cur<=maxD){
+    var mo=cur.getMonth();
+    var yr=cur.getFullYear();
+    var moStart=new Date(yr,mo,1);
+    var moEnd=new Date(yr,mo+1,0);
+    var visStart=moStart<minD?minD:moStart;
+    var visEnd=moEnd>maxD?maxD:moEnd;
+    var wPct=pctW(visStart,visEnd);
+    var NAMES=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+    months.push('<div class="gantt-month" style="width:'+wPct+'%">'+NAMES[mo]+'</div>');
+    cur=new Date(yr,mo+1,1);
+  }
+
+  // ── Week tick marks every 7 days ────────────────────────────────────────────
+  var ticks='';
+  var d=new Date(minD);
+  while(d<=maxD){
+    var w=pctW(d,new Date(d.getTime()+6*86400000));
+    ticks+='<div class="gantt-tick" style="width:'+w+'%"></div>';
+    d=new Date(d.getTime()+7*86400000);
+  }
+
+  // ── Today line ──────────────────────────────────────────────────────────────
+  var todayPct=pct(TODAY);
+  var todayLine='<div class="gantt-today-line" style="left:'+todayPct+'%">'
+    +'<div class="gantt-today-tip">hoje</div></div>';
+
+  // ── One row per project ─────────────────────────────────────────────────────
+  var rows=PROJ_DEFS.map(function(proj){
+    var projEvs=events.filter(function(e){return e.projectId===proj.id;});
+    if(!projEvs.length)return''; // hide projects with no events
+
+    // Sort by startDate for label collision avoidance
+    projEvs.sort(function(a,b){return a.startDate-b.startDate;});
+
+    // Build items — track last label right-edge to avoid overlap
+    var lastLabelRight=-1;
+    var items=projEvs.map(function(e){
+      var isDone=e.done;
+      var doneClass=isDone?' done':'';
+
+      if(e.type==='milestone'){
+        var lp=pct(e.startDate);
+        var showLabel=(lp-lastLabelRight)>8;
+        var shortTitle=e.title.length>18?e.title.slice(0,16)+'…':e.title;
+        var label=showLabel?'<div class="gantt-label" style="left:'+lp+'%;color:'+proj.color+';transform:translateX(-50%)">'+esc(shortTitle)+'</div>':'';
+        if(showLabel)lastLabelRight=lp+9;
+        return'<div class="gantt-diamond'+doneClass+'" style="left:'+lp+'%;background:'+proj.color+'" title="'+esc(e.title)+'"></div>'+label;
+      } else {
+        var lp2=pct(e.startDate);
+        var wp=pctW(e.startDate,e.endDate);
+        var shortTitle2=e.title.length>20?e.title.slice(0,18)+'…':e.title;
+        var showLabel2=(lp2-lastLabelRight)>6;
+        var label2=showLabel2?'<div class="gantt-label" style="left:'+lp2+'%;color:'+proj.color+'">'+esc(shortTitle2)+'</div>':'';
+        if(showLabel2)lastLabelRight=lp2+wp+1;
+        return'<div class="gantt-bar'+doneClass+'" style="left:'+lp2+'%;width:'+wp+'%;background:'+proj.color+(isDone?';opacity:.3':'')+'" title="'+esc(e.title)+'"></div>'+label2;
+      }
+    }).join('');
+
+    var shortName=proj.label.length>14?proj.label.slice(0,12)+'…':proj.label;
+    return'<div class="gantt-row">'
+      +'<div class="gantt-row-label"><div class="gantt-row-label-name" style="color:'+proj.color+'" title="'+esc(proj.label)+'">'+esc(shortName)+'</div></div>'
+      +'<div class="gantt-row-lane" style="position:relative">'+todayLine+items+'</div>'
+      +'</div>'
+      +'<div class="gantt-row-sep"></div>';
   }).join('');
-  const legend='<div class="tl-leg">'
-    +'<div class="tl-li"><div class="tl-dot" style="background:#0F6E56"></div>Natura</div>'
-    +'<div class="tl-li"><div class="tl-dot" style="background:#534AB7"></div>Riachuelo</div>'
-    +(S.customProjects||[]).map(p=>'<div class="tl-li"><div class="tl-dot" style="background:'+p.color+'"></div>'+esc(p.name)+'</div>').join('')
-    +'<div class="tl-li"><div class="tl-dot" style="background:var(--urg);border-radius:50%"></div>hoje</div>'
+
+  // ── Legend ─────────────────────────────────────────────────────────────────
+  var legendProjs=PROJ_DEFS
+    .filter(function(p){return events.some(function(e){return e.projectId===p.id;});})
+    .map(function(p){return'<div class="gantt-li"><div class="gantt-li-bar" style="background:'+p.color+'"></div>'+esc(p.label)+'</div>';})
+    .join('');
+  var legend='<div class="gantt-legend">'
+    +legendProjs
+    +'<div class="gantt-li"><div class="gantt-li-ms" style="background:var(--tx2)"></div>milestone</div>'
+    +'<div class="gantt-li"><div class="gantt-li-today"></div>hoje</div>'
     +'</div>';
-  // Dynamic conflict detection — calculated at render, not stored
-  const tlEvents=getTimelineEvents();
-  const conflicts=generateConflicts(tlEvents);
-  const typeMap={critical:'red',compression:'amber',parallel:'amber'};
-  const obsHTML=conflicts.length
-    ?conflicts.map(o=>'<div class="ob '+(typeMap[o.type]||'amber')+'"><div class="ob-t">'+o.title+'</div>'+esc(o.text)+'</div>').join('')
-    :'<div class="ob amber" style="opacity:.6">Nenhum conflito detectado no período.</div>';
-  return legend+'<div class="tl-wrap"><div class="tl-inner">'
-    +'<div class="tl-months">'+moHTML+'</div>'
-    +'<div style="position:relative;margin-left:80px;">'
-    +'<div class="tl-today" style="left:'+todayPct+';height:300px"><div class="tl-tlbl">hoje</div></div>'
-    +'<div class="tl-row"><div class="tl-lbl" style="color:#0F6E56">🌿 Natura</div><div class="tl-lane">'+makePins('n')+'</div></div>'
-    +'<div class="tl-sep"></div>'
-    +'<div class="tl-row"><div class="tl-lbl" style="color:#534AB7">✦ Riachuelo</div><div class="tl-lane">'+makePins('r')+'</div></div>'
-    +customRows+'</div></div></div>'
-    +'<div class="sec" style="margin-top:20px">Encavalamentos</div>'+obsHTML;
+
+  return legend
+    +'<div class="gantt-wrap"><div class="gantt-inner">'
+    +'<div class="gantt-head">'+months.join('')+'</div>'
+    +'<div class="gantt-ticks">'+ticks+'</div>'
+    +rows
+    +'</div></div>';
 }
 
-// ── interactions ──────────────────────────────────────────────────────────────
-const B=window.B={};
-B.sv=function(v){V=v;render();window.scrollTo(0,0);};
-B.toggleDN=function(){showDN=!showDN;render();};
-B.toggleDR=function(id){id=id||'r';showDR[id]=!showDR[id];render();};
 
-B.toggleTask=async function(id,proj){
-  const cust=(S.customTasks||[]).find(t=>t.id===id);
-  if(cust)cust.done=!cust.done;
-  else{if(!S.tasks[id])return;S.tasks[id].done=!S.tasks[id].done;}
-  const done=cust?cust.done:S.tasks[id].done;
-  const item=document.getElementById('ti-'+id),cb=document.getElementById('cb-'+id);
-  if(item)item.classList.toggle('done',done);
-  if(cb){cb.className='cb'+(done?(proj==='n'?' on-n':' on-r'):'');cb.setAttribute('aria-checked',String(done));}
-  await save(done?'Tarefa concluída ✓':'Tarefa reaberta');
-  setTimeout(render,350);
-};
-
-B.setStatus=async function(id,sel){
-  if(!S.taskStatus)S.taskStatus={};
-  S.taskStatus[id]=sel.value;
-  Object.values(SM).forEach(v=>sel.classList.remove(v.cls));
-  sel.classList.add((SM[sel.value]||SM.and).cls);
-  const item=document.getElementById('ti-'+id);
-  if(item){
-    ['st-atr','st-pri','st-agu','st-ibs','st-pau'].forEach(c=>item.classList.remove(c));
-    const acc={'atr':'st-atr','pri':'st-pri','agu':'st-agu','ibs':'st-ibs','pau':'st-pau'}[sel.value];
-    if(acc)item.classList.add(acc);
-  }
-  await save('Status atualizado');
-  setTimeout(render,400);
-};
-
-// comments — inline, always built in buildTask, toggled via hidden attr
-B.toggleCmt=function(id){
-  EC[id]=!EC[id];
-  const wrap=document.getElementById('cmt-'+id);
-  const btn=document.getElementById('expbtn-'+id);
-  if(wrap){
-    if(EC[id]&&wrap.innerHTML===''){wrap.innerHTML=buildCmts(id);attachEv();}
-    wrap.hidden=!EC[id];
-  }
-  if(btn){
-    const cmts=(S.taskComments||{})[id]||[];
-    const cnt=cmts.length;
-    btn.textContent=EC[id]?'▴ fechar':'▾ '+(cnt?cnt+' comentário'+(cnt>1?'s':''):'comentários');
-    btn.className=cnt&&!EC[id]?'exp-btn has-c':'exp-btn';
-  }
-};
-
-B.addCmt=async function(taskId){
-  const el=document.getElementById('nc-'+taskId);
-  if(!el||!el.value.trim())return;
-  if(!S.taskComments)S.taskComments={};
-  if(!S.taskComments[taskId])S.taskComments[taskId]=[];
-  S.taskComments[taskId].push({id:uid(),text:el.value.trim(),ts:Date.now(),edited:false});
-  el.value='';el.style.height='auto';
-  await save('Comentário salvo ✓');
-  const wrap=document.getElementById('cmt-'+taskId);
-  if(wrap){wrap.innerHTML=buildCmts(taskId);attachEv();}
-  const btn=document.getElementById('expbtn-'+taskId);
-  if(btn){const cnt=S.taskComments[taskId].length;btn.textContent='▴ fechar';btn.className='exp-btn has-c';}
-};
-
-B.delCmt=async function(taskId,cId){
-  if(!S.taskComments||!S.taskComments[taskId])return;
-  S.taskComments[taskId]=S.taskComments[taskId].filter(c=>c.id!==cId);
-  await save('Comentário removido');
-  const wrap=document.getElementById('cmt-'+taskId);
-  if(wrap){wrap.innerHTML=buildCmts(taskId);attachEv();}
-  const btn=document.getElementById('expbtn-'+taskId);
-  if(btn){const cnt=(S.taskComments[taskId]||[]).length;btn.textContent=EC[taskId]?'▴ fechar':'▾ '+(cnt?cnt+' comentário'+(cnt>1?'s':''):'comentários');btn.className=cnt?'exp-btn has-c':'exp-btn';}
-};
-
-B.editCmt=function(taskId,cId){
-  const el=document.getElementById('ct-'+cId);if(!el)return;
-  const orig=el.textContent;
-  const inp=document.createElement('textarea');
-  inp.className='cmt-edit-inp';inp.value=orig;inp.rows=2;
-  el.replaceWith(inp);inp.focus();
-  inp.addEventListener('blur',async function(){
-    const txt=inp.value.trim()||orig;
-    const c=(S.taskComments[taskId]||[]).find(x=>x.id===cId);
-    if(c){c.text=txt;c.edited=true;}
-    await save('Comentário editado');
-    const wrap=document.getElementById('cmt-'+taskId);
-    if(wrap){wrap.innerHTML=buildCmts(taskId);attachEv();}
-  });
-};
-
-B.saveAlert=async function(proj,idx,val){
-  if(!S.projectAlerts)S.projectAlerts={};
-  if(!S.projectAlerts[proj])S.projectAlerts[proj]=[...(DA[proj]||[])];
-  if(S.projectAlerts[proj][idx])S.projectAlerts[proj][idx].text=val;
-  await save('Alerta salvo ✓');
-};
-B.delAlert=async function(proj,idx){
-  if(!S.projectAlerts)S.projectAlerts={};
-  if(!S.projectAlerts[proj])S.projectAlerts[proj]=[...(DA[proj]||[])];
-  S.projectAlerts[proj].splice(idx,1);
-  await save('Alerta removido');render();
-};
-B.addAlert=async function(proj){
-  if(!S.projectAlerts)S.projectAlerts={};
-  if(!S.projectAlerts[proj])S.projectAlerts[proj]=[...(DA[proj]||[])];
-  S.projectAlerts[proj].push({id:uid(),type:'amber',text:'Novo alerta — clique para editar'});
-  await save();render();
-};
-
-B.savePropNote=async function(key,val,sid){
-  if(!S.propNotes)S.propNotes={};S.propNotes[key]=val;
-  await save();
-  const el=document.getElementById(sid);
-  if(el){el.style.opacity='1';setTimeout(()=>el.style.opacity='0',2000);}
-};
-B.delProp=async function(key,isCustom){
-  if(!confirm('Remover esta proposta?'))return;
-  if(isCustom===true||String(isCustom)==='true'){
-    S.customProps=(S.customProps||[]).filter(p=>p.id!==key);
-    if(S.propNotes)delete S.propNotes[key];
-  }else{
-    if(!Array.isArray(S.hiddenProps))S.hiddenProps=[];
-    if(!S.hiddenProps.includes(key))S.hiddenProps.push(key);
-  }
-  await save('Proposta removida');render();
-};
-
-B.openAddMilestone=function(projId){
-  showModal('<div class="modal-ov" onclick="if(event.target===this)B.closeModal()">'
-    +'<div class="modal"><div class="modal-drag"></div><h3>Novo milestone</h3>'
-    +'<div class="mf"><label class="ml" for="mm-l">Descrição</label><input class="mi" id="mm-l" placeholder="Ex: Apresentação para cliente"/></div>'
-    +'<div class="mf"><label class="ml" for="mm-d">Data (dd/mm)</label><input class="mi" id="mm-d" placeholder="Ex: 20/05" inputmode="numeric"/></div>'
-    +'<div class="merr" id="mm-e"></div>'
-    +'<div class="ma"><button class="mc" onclick="B.closeModal()">Cancelar</button>'
-    +'<button class="mok" style="background:var(--n)" onclick="B.confirmMilestone(\''+projId+'\')">Adicionar</button>'
-    +'</div></div></div>');
-};
-B.confirmMilestone=async function(projId){
-  const label=document.getElementById('mm-l').value.trim();
-  const date=document.getElementById('mm-d').value.trim();
-  if(!label){document.getElementById('mm-e').textContent='Descreva o milestone.';return;}
-  if(!S.projectMilestones)S.projectMilestones={};
-  if(!S.projectMilestones[projId])S.projectMilestones[projId]=[];
-  S.projectMilestones[projId].push({id:uid(),label,date:date||'a definir',ts:Date.now()});
-  B.closeModal();await save('Milestone adicionado ✓');render();
-};
-B.delMilestone=async function(projId,msId){
-  if(!S.projectMilestones||!S.projectMilestones[projId])return;
-  S.projectMilestones[projId]=S.projectMilestones[projId].filter(m=>m.id!==msId);
-  await save('Milestone removido');render();
-};
-
-B.openAddTask=function(proj){
-  const cp=(S.customProjects||[]).find(p=>p.id===proj);
-  const label=proj==='n'?'Natura MMBB':proj==='r'?'Riachuelo':(cp?cp.name:proj);
-  const clr=proj==='n'?'#0F6E56':proj==='r'?'#533AB7':(cp?cp.color:'#0F6E56');
-  showModal('<div class="modal-ov" onclick="if(event.target===this)B.closeModal()">'
-    +'<div class="modal"><div class="modal-drag"></div><h3>Nova tarefa — '+esc(label)+'</h3>'
-    +'<div class="mf"><label class="ml" for="mt-t">Tarefa</label><input class="mi" id="mt-t" placeholder="Descreva a tarefa..."/></div>'
-    +'<div class="mf"><label class="ml" for="mt-w">Responsável</label>'
-    +'<select class="msel" id="mt-w"><option>Bru</option><option>Laura</option><option>Lele</option><option>Bru + Lele</option><option>Laura + Lele</option><option>Bru + Laura</option><option>ALL</option></select></div>'
-    +'<div class="mf"><label class="ml" for="mt-d">Deadline</label><input class="mi" id="mt-d" placeholder="ex: 05/04" inputmode="numeric"/></div>'
-    +'<div class="mf"><label class="ml" for="mt-p">Status inicial</label>'
-    +'<select class="msel" id="mt-p"><option value="and">🟢 em andamento</option><option value="ibs">🔵 início em breve</option><option value="agu">🟡 aguardando info</option><option value="pri">🟠 prioridade total</option><option value="atr">🔴 atrasada</option><option value="pau">⚪ pausada</option></select></div>'
-    +'<div class="mf"><label class="ml" for="mt-b">Adicionado por</label>'
-    +'<select class="msel" id="mt-b"><option>Bru</option><option>Laura</option><option>Lele</option></select></div>'
-    +'<div class="merr" id="mt-e"></div>'
-    +'<div class="ma"><button class="mc" onclick="B.closeModal()">Cancelar</button>'
-    +'<button class="mok" style="background:'+clr+'" onclick="B.confirmTask(\''+proj+'\')">Adicionar</button>'
-    +'</div></div></div>');
-};
-B.confirmTask=async function(proj){
-  const title=document.getElementById('mt-t').value.trim();
-  if(!title){document.getElementById('mt-e').textContent='Descreva a tarefa.';return;}
-  const who=document.getElementById('mt-w').value;
-  const date=document.getElementById('mt-d').value.trim();
-  const statusVal=document.getElementById('mt-p').value;
-  const by=document.getElementById('mt-b').value;
-  const taskId=uid();
-  const task={id:taskId,p:proj,title,who,date:date||'a definir',pri:2,addedBy:by,done:false,custom:true,ts:Date.now()};
-  if(!S.customTasks)S.customTasks=[];
-  S.customTasks.push(task);
-  if(!S.taskStatus)S.taskStatus={};
-  S.taskStatus[taskId]=statusVal;
-  S.updates=S.updates||[];
-  S.updates.push({id:uid(),text:by+' adicionou: "'+title+'" ['+(SM[statusVal]||SM.and).label+']',ts:Date.now()});
-  B.closeModal();await save('Tarefa adicionada ✓');render();
-};
-B.delTask=async function(id){
-  if(!confirm('Remover esta tarefa?'))return;
-  S.customTasks=(S.customTasks||[]).filter(t=>t.id!==id);
-  await save('Tarefa removida');render();
-};
-
-B.openAddProp=function(){
-  showModal('<div class="modal-ov" onclick="if(event.target===this)B.closeModal()">'
-    +'<div class="modal"><div class="modal-drag"></div><h3>Nova proposta</h3>'
-    +'<div class="mf"><label class="ml" for="mp-n">Nome</label><input class="mi" id="mp-n" placeholder="Ex: Projeto Boticário"/></div>'
-    +'<div class="merr" id="mp-e"></div>'
-    +'<div class="ma"><button class="mc" onclick="B.closeModal()">Cancelar</button>'
-    +'<button class="mok" style="background:var(--p)" onclick="B.confirmProp()">Adicionar</button>'
-    +'</div></div></div>');
-};
-B.confirmProp=async function(){
-  const name=document.getElementById('mp-n').value.trim();
-  if(!name){document.getElementById('mp-e').textContent='Dê um nome.';return;}
-  if(!Array.isArray(S.customProps))S.customProps=[];
-  S.customProps.push({id:uid(),name,ts:Date.now()});
-  B.closeModal();await save('Proposta adicionada ✓');render();
-};
-
-B.openAddProject=function(){
-  const sw=PC.map((c,i)=>'<div class="'+(i===0?'sel':'')+'" style="background:'+c+'" onclick="B.pickColor(\''+c+'\',this)" data-c="'+c+'"></div>').join('');
-  const em=PE.map(e=>'<button onclick="B.pickEmoji(\''+e+'\',this)" data-e="'+e+'">'+e+'</button>').join('');
-  showModal('<div class="modal-ov" onclick="if(event.target===this)B.closeModal()">'
-    +'<div class="modal"><div class="modal-drag"></div><h3>Novo projeto</h3>'
-    +'<div class="mf"><label class="ml" for="np-n">Nome</label><input class="mi" id="np-n" placeholder="Ex: Boticário, OLX..."/></div>'
-    +'<div class="mf"><label class="ml">Ícone</label><div class="ew" id="np-em">'+em+'</div></div>'
-    +'<div class="mf"><label class="ml">Cor</label><div class="csw" id="np-cl">'+sw+'</div></div>'
-    +'<div class="mf"><label class="ml" for="np-ml">Próximo milestone</label><input class="mi" id="np-ml" placeholder="Ex: Apresentação para cliente"/></div>'
-    +'<div class="mf"><label class="ml" for="np-md">Data (dd/mm)</label><input class="mi" id="np-md" placeholder="Ex: 15/05" inputmode="numeric"/></div>'
-    +'<div class="merr" id="np-e"></div>'
-    +'<div class="ma"><button class="mc" onclick="B.closeModal()">Cancelar</button>'
-    +'<button class="mok" id="np-ok" style="background:'+PC[0]+'" onclick="B.confirmProject()">Criar projeto</button>'
-    +'</div></div></div>');
-};
-B.pickColor=function(c,el){
-  document.querySelectorAll('#np-cl div').forEach(s=>s.classList.remove('sel'));
-  el.classList.add('sel');
-  const btn=document.getElementById('np-ok');if(btn)btn.style.background=c;
-};
-B.pickEmoji=function(e,el){
-  document.querySelectorAll('#np-em button').forEach(b=>b.classList.remove('sel'));
-  el.classList.add('sel');
-};
-B.confirmProject=async function(){
-  const name=document.getElementById('np-n').value.trim();
-  if(!name){document.getElementById('np-e').textContent='Dê um nome ao projeto.';return;}
-  const color=document.querySelector('#np-cl div.sel')?.dataset.c||PC[0];
-  const emojiEl=document.querySelector('#np-em button.sel');
-  const emoji=emojiEl?emojiEl.dataset.e:'📁';
-  const msLabel=document.getElementById('np-ml').value.trim();
-  const msRaw=document.getElementById('np-md').value.trim();
-  let milestoneDate=null;
-  if(msRaw){const pt=msRaw.split('/').map(Number);if(pt.length===2&&pt[0]&&pt[1])milestoneDate=new Date(2026,pt[1]-1,pt[0]).toISOString();}
-  const proj={id:uid(),name,color,emoji,milestoneLabel:msLabel||null,milestoneDate,ts:Date.now()};
-  if(!Array.isArray(S.customProjects))S.customProjects=[];
-  S.customProjects.push(proj);
-  S.updates=S.updates||[];
-  S.updates.push({id:uid(),text:'Novo projeto: '+emoji+' '+name,ts:Date.now()});
-  B.closeModal();await save('Projeto criado ✓');render();
-  setTimeout(()=>B.sv(proj.id),100);
-};
 
 function doArchive(id,name,emoji,color,fixed){
   const tasks=fixed?[]:(S.customTasks||[]).filter(t=>t.p===id).map(t=>({...t}));
