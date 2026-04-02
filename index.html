@@ -387,75 +387,51 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--tx);min-h
 .drive-chip.add{color:var(--tx3);border-style:dashed;}
 .drive-chip.add:hover{color:var(--n);border-color:var(--n);}
 
-/* ── Timeline redesign ──────────────────────────────────────────────────────── */
-.tl-root{padding-bottom:32px;}
-
-/* Legend */
-.tl-legend{display:flex;gap:20px;flex-wrap:wrap;margin-bottom:28px;align-items:center;}
+/* ── Timeline ───────────────────────────────────────────────────────────────── */
+.tl-root{padding-bottom:40px;}
+/* legend */
+.tl-legend{display:flex;gap:20px;flex-wrap:wrap;margin-bottom:32px;align-items:center;}
 .tl-li{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--tx2);}
-.tl-li-ms{width:11px;height:11px;transform:rotate(45deg);border-radius:2px;flex-shrink:0;}
-.tl-li-arc{width:28px;height:4px;border-radius:2px;opacity:.45;flex-shrink:0;}
+.tl-li-ms{width:10px;height:10px;transform:rotate(45deg);border-radius:2px;flex-shrink:0;}
+.tl-li-arc{width:28px;height:5px;border-radius:3px;opacity:.5;flex-shrink:0;}
 .tl-li-today{width:2px;height:16px;background:var(--urg);border-radius:1px;flex-shrink:0;}
-
-/* Scroll area */
-.tl-chart{overflow-x:auto;padding-bottom:8px;}
+/* scroll */
+.tl-chart{overflow-x:auto;}
 .tl-chart::-webkit-scrollbar{height:4px;}
 .tl-chart::-webkit-scrollbar-thumb{background:var(--bd);border-radius:2px;}
-.tl-inner{min-width:680px;position:relative;}
-
-/* Month header */
-.tl-months{display:flex;margin-left:150px;margin-bottom:0;}
+.tl-inner{min-width:640px;}
+/* month grid */
+.tl-grid{display:flex;margin-left:160px;border-bottom:1px solid var(--bd);}
 .tl-mo{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;
-  color:var(--tx3);padding:0 0 8px 10px;
-  border-left:1px solid var(--bd);border-bottom:1px solid var(--bd);
-  box-sizing:border-box;}
-
-/* Project row */
-.tl-proj{display:flex;align-items:stretch;border-bottom:1px solid var(--bd);}
-.tl-proj:first-of-type{border-top:1px solid var(--bd);}
-
-/* Label column */
-.tl-proj-label{width:150px;flex-shrink:0;padding:20px 14px 20px 0;
-  display:flex;align-items:center;justify-content:flex-end;
+  color:var(--tx3);padding:0 0 6px 8px;border-left:1px solid var(--bd);box-sizing:border-box;}
+/* project row */
+.tl-proj{display:flex;align-items:center;border-bottom:1px solid var(--bd);min-height:72px;}
+/* label */
+.tl-label{width:160px;flex-shrink:0;padding-right:16px;text-align:right;
   font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;
-  color:var(--tx2);gap:7px;text-align:right;}
-.tl-proj-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
-
-/* Lane */
-.tl-lane{flex:1;position:relative;min-height:80px;}
-
-/* Baseline */
-.tl-baseline{position:absolute;left:0;right:0;top:50%;
-  height:1px;background:var(--bd);opacity:.7;}
-
-/* Arc bar — single work-period span */
-.tl-arc{position:absolute;height:6px;border-radius:3px;
-  top:calc(50% - 3px);opacity:.38;min-width:4px;}
-
-/* Today line */
-.tl-today{position:absolute;top:0;bottom:0;width:2px;border-radius:1px;
-  background:var(--urg);z-index:10;pointer-events:none;}
-.tl-today-lbl{position:absolute;top:6px;left:5px;
-  font-size:9px;color:var(--urg);font-weight:700;white-space:nowrap;
-  background:var(--bg);padding:0 2px;border-radius:2px;}
-
-/* Milestone */
-.tl-ms{position:absolute;display:flex;flex-direction:column;
-  align-items:center;z-index:5;transform:translateX(-50%);}
-.tl-ms-above{top:0;bottom:50%;justify-content:flex-end;}
-.tl-ms-below{top:50%;bottom:0;justify-content:flex-start;}
-.tl-ms-diamond{width:16px;height:16px;transform:rotate(45deg);border-radius:3px;
+  color:var(--tx2);display:flex;align-items:center;justify-content:flex-end;gap:8px;}
+.tl-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+/* lane */
+.tl-lane{flex:1;position:relative;height:72px;}
+/* single arc bar — sits on the center line */
+.tl-arc{position:absolute;top:50%;transform:translateY(-50%);
+  height:6px;border-radius:3px;opacity:.4;min-width:6px;}
+/* milestone — diamond centred on baseline, label above */
+.tl-ms{position:absolute;top:50%;transform:translate(-50%,-50%);
+  display:flex;flex-direction:column;align-items:center;z-index:6;cursor:default;}
+.tl-ms-lbl{font-size:9px;font-weight:600;white-space:nowrap;max-width:88px;
+  overflow:hidden;text-overflow:ellipsis;text-align:center;
+  margin-bottom:6px;padding:2px 6px;border-radius:4px;line-height:1.3;}
+.tl-ms-diamond{width:14px;height:14px;transform:rotate(45deg);border-radius:2px;
   flex-shrink:0;transition:transform .15s;}
-.tl-ms:hover .tl-ms-diamond{transform:rotate(45deg) scale(1.18);}
-.tl-ms-lbl{font-size:9px;font-weight:600;white-space:nowrap;
-  max-width:90px;overflow:hidden;text-overflow:ellipsis;
-  text-align:center;line-height:1.3;letter-spacing:.01em;
-  padding:2px 5px;border-radius:4px;}
-.tl-ms-lbl-above{margin-bottom:5px;}
-.tl-ms-lbl-below{margin-top:5px;}
-
-/* Empty */
-.tl-empty{text-align:center;padding:52px 0;color:var(--tx3);font-size:13px;}
+.tl-ms:hover .tl-ms-diamond{transform:rotate(45deg) scale(1.2);}
+/* today line */
+.tl-today{position:absolute;top:0;bottom:0;width:2px;background:var(--urg);
+  z-index:10;pointer-events:none;border-radius:1px;}
+.tl-today-lbl{position:absolute;top:8px;left:5px;font-size:9px;font-weight:700;
+  color:var(--urg);white-space:nowrap;background:var(--bg);padding:0 3px;border-radius:2px;}
+/* empty */
+.tl-empty{text-align:center;padding:56px 0;color:var(--tx3);font-size:13px;}
 
 /* postit edit hover */
 .postit{cursor:pointer;}
@@ -1365,120 +1341,90 @@ function getTimelineItems(){
 
 // ─────────────────────────────────────────────────────────────────────────────
 function buildTimeline(allMs){
-  // ── Project list ────────────────────────────────────────────────────────────
-  var PROJ_DEFS=[
+  /* Project definitions */
+  var PROJ=[
     {id:'n',label:'Natura MMBB',color:'#0F6E56'},
     {id:'r',label:'Riachuelo',color:'#534AB7'},
   ];
   (S.customProjects||[]).forEach(function(p){
-    PROJ_DEFS.push({id:p.id,label:p.name,color:p.color||'#888'});
+    PROJ.push({id:p.id,label:p.name,color:p.color||'#888'});
   });
-  var validIds=new Set(PROJ_DEFS.map(function(p){return p.id;}));
+  var ids=new Set(PROJ.map(function(p){return p.id;}));
 
-  // ── Unified data ────────────────────────────────────────────────────────────
-  var all=getTimelineItems().filter(function(e){
-    return e.projectId&&validIds.has(e.projectId);
-  });
+  /* Unified data */
+  var items=getTimelineItems().filter(function(e){return e.projectId&&ids.has(e.projectId);});
+  if(!items.length)return'<p class="tl-empty">Nenhum item com data encontrado.</p>';
 
-  if(!all.length)return'<p class="tl-empty">Nenhum item com data encontrado.</p>';
+  /* Date window — full months, always includes today */
+  var dates=items.reduce(function(a,e){a.push(e.startDate,e.endDate);return a;},[TODAY]);
+  var lo=new Date(Math.min.apply(null,dates));
+  var hi=new Date(Math.max.apply(null,dates));
+  var minD=new Date(lo.getFullYear(),lo.getMonth(),1);
+  var maxD=new Date(hi.getFullYear(),hi.getMonth()+2,0);
+  var span=Math.max(1,Math.round((maxD-minD)/864e5));
 
-  // ── Date window: snap to full months ────────────────────────────────────────
-  var allDates=all.reduce(function(acc,e){
-    acc.push(e.startDate,e.endDate);return acc;
-  },[TODAY]);
-  var rawMin=new Date(Math.min.apply(null,allDates));
-  var rawMax=new Date(Math.max.apply(null,allDates));
-  // Always include today
-  if(TODAY<rawMin)rawMin=new Date(TODAY);
-  if(TODAY>rawMax)rawMax=new Date(TODAY);
-  var minD=new Date(rawMin.getFullYear(),rawMin.getMonth(),1);
-  var maxD=new Date(rawMax.getFullYear(),rawMax.getMonth()+2,0); // end of next month for breathing
-  var totalDays=Math.max(1,Math.round((maxD-minD)/86400000));
+  function pct(d){return Math.max(0,Math.min(100,Math.round((d-minD)/864e5)/span*100));}
+  function pw(s,e){return Math.max(.3,Math.max(1,Math.round((e-s)/864e5)+1)/span*100);}
 
-  function pct(d){
-    return Math.max(0,Math.min(100,Math.round((d-minD)/86400000)/totalDays*100));
-  }
-  function pctW(s,e){
-    return Math.max(0.2,Math.max(1,Math.round((e-s)/86400000)+1)/totalDays*100);
-  }
-
-  // ── Month header ────────────────────────────────────────────────────────────
-  var MNAMES=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
-  var months='';
+  /* Month grid */
+  var MO=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+  var grid='';
   var mc=new Date(minD.getFullYear(),minD.getMonth(),1);
   while(mc<=maxD){
-    var mo=mc.getMonth(),yr=mc.getFullYear();
-    var mEnd=new Date(yr,mo+1,0);
-    var visEnd=mEnd>maxD?maxD:mEnd;
-    months+='<div class="tl-mo" style="width:'+pctW(mc,visEnd)+'%">'+MNAMES[mo]+'</div>';
-    mc=new Date(yr,mo+1,1);
+    var m=mc.getMonth(),y=mc.getFullYear();
+    var me=new Date(y,m+1,0);
+    grid+='<div class="tl-mo" style="width:'+pw(mc,me>maxD?maxD:me)+'%">'+MO[m]+'</div>';
+    mc=new Date(y,m+1,1);
   }
 
-  // ── Today line ──────────────────────────────────────────────────────────────
-  var todayPct=pct(TODAY);
-  var todayLine='<div class="tl-today" style="left:'+todayPct+'%">'
-    +'<div class="tl-today-lbl">hoje</div></div>';
+  /* Today line — one per lane, rendered inside each */
+  var tp=pct(TODAY);
+  function todayEl(){
+    return'<div class="tl-today" style="left:'+tp+'%"><div class="tl-today-lbl">hoje</div></div>';
+  }
 
-  // ── Project rows ─────────────────────────────────────────────────────────────
-  var rows=PROJ_DEFS.map(function(proj){
-    var evs=all.filter(function(e){return e.projectId===proj.id;});
+  /* Project rows */
+  var rows=PROJ.map(function(proj){
+    var evs=items.filter(function(e){return e.projectId===proj.id;});
     if(!evs.length)return'';
 
     var tasks=evs.filter(function(e){return e.type==='task';});
-    var milestones=evs.filter(function(e){return e.type==='milestone';})
-      .sort(function(a,b){return a.startDate-b.startDate;});
+    var ms=evs.filter(function(e){return e.type==='milestone';})
+              .sort(function(a,b){return a.startDate-b.startDate;});
 
-    // ── Single arc bar: span from earliest task start to latest task end ──────
-    var arcBar='';
+    /* Single arc — full work span of all tasks */
+    var arc='';
     if(tasks.length){
-      var arcStart=new Date(Math.min.apply(null,tasks.map(function(t){return t.startDate;})));
-      var arcEnd=new Date(Math.max.apply(null,tasks.map(function(t){return t.endDate;})));
-      // Don't let arc extend before today for past tasks — clamp to today min
-      // Actually show full arc so user sees the span of work
-      var lp=pct(arcStart);
-      var wp=pctW(arcStart,arcEnd);
-      arcBar='<div class="tl-arc" style="left:'+lp+'%;width:'+wp+'%;background:'+proj.color+'"></div>';
+      var s=new Date(Math.min.apply(null,tasks.map(function(t){return t.startDate;})));
+      var e=new Date(Math.max.apply(null,tasks.map(function(t){return t.endDate;})));
+      arc='<div class="tl-arc" style="left:'+pct(s)+'%;width:'+pw(s,e)+'%;background:'+proj.color+'"></div>';
     }
 
-    // ── Milestone diamonds ────────────────────────────────────────────────────
-    // Anti-overlap: stagger labels up/down alternately when too close
-    var lastPct=-999;
-    var msDivs=milestones.map(function(e,i){
-      var lp=pct(e.startDate);
-      var tooClose=lp-lastPct<12;
-      lastPct=lp;
-      var shortTitle=e.title.length>18?e.title.slice(0,16)+'\u2026':e.title;
-      // Alternate above/below for close milestones to avoid overlap
-      var above=!(tooClose&&i%2===1);
-      var lbl='<div class="tl-ms-lbl '+(above?'tl-ms-lbl-above':'tl-ms-lbl-below')+'" style="color:'+proj.color+'">'
-        +esc(shortTitle)+'</div>';
-      return'<div class="tl-ms '+(above?'tl-ms-above':'tl-ms-below')+'" style="left:'+lp+'%" title="'+esc(e.title)+'">'
-        +(above?lbl:'')
-        +'<div class="tl-ms-diamond" style="background:'+proj.color+';box-shadow:0 0 0 3px '+proj.color+'22"></div>'
-        +(!above?lbl:'')
+    /* Milestone diamonds with anti-overlap labels */
+    var prevPct=-999;
+    var diamonds=ms.map(function(m){
+      var lp=pct(m.startDate);
+      var flip=lp-prevPct<13;   // too close → flip label below diamond
+      prevPct=lp;
+      var short=m.title.length>17?m.title.slice(0,15)+'\u2026':m.title;
+      var lbl='<div class="tl-ms-lbl" style="color:'+proj.color+';background:'+proj.color+'18">'+esc(short)+'</div>';
+      return'<div class="tl-ms" style="left:'+lp+'%;'+(flip?'flex-direction:column-reverse;margin-top:22px':'margin-top:-22px')+'" title="'+esc(m.title)+'">'
+        +lbl
+        +'<div class="tl-ms-diamond" style="background:'+proj.color+'"></div>'
         +'</div>';
     }).join('');
 
     return'<div class="tl-proj">'
-      +'<div class="tl-proj-label">'
-      +'<span class="tl-proj-dot" style="background:'+proj.color+'"></span>'
-      +esc(proj.label)+'</div>'
-      +'<div class="tl-lane">'
-      +'<div class="tl-baseline"></div>'
-      +todayLine+arcBar+msDivs
-      +'</div>'
+      +'<div class="tl-label"><div class="tl-dot" style="background:'+proj.color+'"></div>'+esc(proj.label)+'</div>'
+      +'<div class="tl-lane">'+todayEl()+arc+diamonds+'</div>'
       +'</div>';
   }).join('');
 
-  // ── Legend ──────────────────────────────────────────────────────────────────
-  var activeProjs=PROJ_DEFS.filter(function(p){
-    return all.some(function(e){return e.projectId===p.id;});
-  });
+  /* Legend */
+  var active=PROJ.filter(function(p){return items.some(function(e){return e.projectId===p.id;});});
   var legend='<div class="tl-legend">'
-    +activeProjs.map(function(p){
-      return'<div class="tl-li">'
-        +'<div class="tl-li-ms" style="background:'+p.color+'"></div>'
-        +esc(p.label)+'</div>';
+    +active.map(function(p){
+      return'<div class="tl-li"><div class="tl-li-ms" style="background:'+p.color+'"></div>'+esc(p.label)+'</div>';
     }).join('')
     +'<div class="tl-li"><div class="tl-li-arc" style="background:var(--tx3)"></div>período de trabalho</div>'
     +'<div class="tl-li"><div class="tl-li-today"></div>hoje</div>'
@@ -1486,10 +1432,11 @@ function buildTimeline(allMs){
 
   return'<div class="tl-root">'+legend
     +'<div class="tl-chart"><div class="tl-inner">'
-    +'<div class="tl-months">'+months+'</div>'
+    +'<div class="tl-grid">'+grid+'</div>'
     +rows
     +'</div></div></div>';
 }
+
 
 
 
