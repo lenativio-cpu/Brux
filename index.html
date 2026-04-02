@@ -812,38 +812,29 @@ function buildHTML(){
 
 function buildOverviewAlerts(nat,ria,allMs){
   const alerts=[];
-  const projs=[{id:'n',label:'🌿 Natura MMBB',tasks:nat},{id:'r',label:'✦ Riachuelo',tasks:ria}];
-  for(const {id,label,tasks} of projs){
-    const atr=tasks.filter(t=>!t.done&&(S.taskStatus||{})[t.id]==='atr');
-    const pri=tasks.filter(t=>!t.done&&(S.taskStatus||{})[t.id]==='pri');
-    const hoje=tasks.filter(t=>!t.done&&(t.date||'').toLowerCase()==='hoje'&&!['atr','pri'].includes((S.taskStatus||{})[t.id]||'and'));
-    if(atr.length)alerts.push({type:'red',text:'⚑ '+label+' — '+atr.length+' tarefa'+(atr.length>1?'s':'')+' atrasada'+(atr.length>1?'s':'')+': '+atr.slice(0,2).map(t=>esc(t.title)).join(', ')+(atr.length>2?'…':'')});
-    if(pri.length)alerts.push({type:'red',text:'🟠 '+label+' — prioridade total: '+pri.slice(0,2).map(t=>esc(t.title)).join(', ')+(pri.length>2?'…':'')});
-    if(hoje.length&&!atr.length&&!pri.length)alerts.push({type:'amber',text:'📌 '+label+' — hoje: '+hoje.slice(0,3).map(t=>esc(t.title)).join(', ')+(hoje.length>3?'…':'')});
+  const projs=[
+    {id:'n',emoji:'🌿',label:'Natura MMBB',tasks:nat},
+    {id:'r',emoji:'✦',label:'Riachuelo',tasks:ria},
+  ];
+  for(const {emoji,label,tasks} of projs){
+    // Collect atrasada + prioridade total tasks, max 3
+    const urgent=tasks.filter(t=>!t.done&&['atr','pri'].includes((S.taskStatus||{})[t.id]||''));
+    if(!urgent.length)continue;
+    const titles=urgent.slice(0,3).map(t=>esc(t.title));
+    const more=urgent.length>3?' +' +(urgent.length-3):'';
+    alerts.push({
+      type:'red',
+      text:emoji+' '+label+' — prioridade total: '+titles.join(', ')+more
+    });
   }
-  const urgMs=allMs.filter(m=>m.days<=14);
-  for(const m of urgMs){
-    const cl=m.days<=3?'red':'amber';
-    alerts.push({type:cl,text:(m.days<=3?'⚑ ':'⏳ ')+esc(m.projLabel)+' — "'+esc(m.label)+'" em '+m.days+' dia'+(m.days===1?'':'s')+' ('+m.date.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})+')'});
-  }
-  if(!alerts.length)return'<div class="alert green">✓ Nenhuma urgência no momento — tudo dentro do prazo!</div>';
-  const seen=new Set();
-  const deduped=alerts.filter(a=>{if(seen.has(a.text))return false;seen.add(a.text);return true;});
-  deduped.sort((a,b)=>a.type==='red'&&b.type!=='red'?-1:b.type==='red'&&a.type!=='red'?1:0);
-  return deduped.map(a=>'<div class="alert '+a.type+'"><strong>'+a.text+'</strong></div>').join('');
+  if(!alerts.length)return'';
+  return alerts.map(a=>'<div class="alert '+a.type+'"><strong>'+a.text+'</strong></div>').join('');
 }
 
 function buildOverview(nat,ria,allMs){
   const dynamicAlerts=buildOverviewAlerts(nat,ria,allMs);
   // milestone countdowns (next 4, upcoming only)
-  const msCards=allMs.slice(0,4).map(m=>{
-    const cl=m.days<=3?'red':'amber';
-    return'<div class="ms-cc '+cl+'">'
-      +'<div class="ms-cc-proj">'+esc(m.projLabel)+'</div>'
-      +'<div class="ms-cc-days">'+m.days+' dias</div>'
-      +'<div class="ms-cc-label">'+esc(m.label)+'</div>'
-      +'</div>';
-  }).join('');
+  
 
   // today/urgent tasks
   const allActive=[...nat,...ria,...(S.customTasks||[]).map(t=>({...t,done:t.done}))];
@@ -882,7 +873,6 @@ function buildOverview(nat,ria,allMs){
   }
 
   return dynamicAlerts
-    +(msCards?'<div class="ms-countdown-wrap"><div class="ms-countdown-row">'+msCards+'</div></div>':'')
     +'<div class="focus-grid">'
     +'<div class="focus-card">'
     +'<div class="focus-card-title">🔥 Hoje e atrasadas <span class="focus-count">'+todayTasks.length+'</span></div>'
