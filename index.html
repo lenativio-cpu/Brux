@@ -1334,40 +1334,34 @@ function getTimelineItems(){
 
 // ─────────────────────────────────────────────────────────────────────────────
 function buildTimeline(allMs){
-  // ── Collect all projects in display order ───────────────────────────────────
-  const PROJ_DEFS=[
+  // ── Project definitions ─────────────────────────────────────────────────────
+  var PROJ_DEFS=[
     {id:'n',label:'Natura MMBB',color:'#0F6E56'},
     {id:'r',label:'Riachuelo',color:'#534AB7'},
   ];
   (S.customProjects||[]).forEach(function(p){
     PROJ_DEFS.push({id:p.id,label:p.name,color:p.color||'#888'});
   });
-
-  // ── Collect events using existing parseTaskDate ─────────────────────────────
-  var events=[];
   var validIds=new Set(PROJ_DEFS.map(function(p){return p.id;}));
 
-  // Tasks from TDEFS
-  TDEFS.forEach(function(t){
-    if(!validIds.has(t.p))return;
-    var r=parseTaskDate(t.date);
-    if(!r)return;
-    events.push({id:t.id,projectId:t.p,title:t.title,type:'task',
-      startDate:r.start,endDate:r.end,done:getDone(t.id),milestone:!!t.milestone});
+  // ── Data from unified layer ─────────────────────────────────────────────────
+  var normalized=getTimelineItems().filter(function(e){
+    return e.projectId&&validIds.has(e.projectId);
   });
-  // Custom tasks
-  (S.customTasks||[]).forEach(function(t){
-    if(!t.p||!validIds.has(t.p))return;
-    var r=parseTaskDate(t.date);
-    if(!r)return;
-    events.push({id:t.id,projectId:t.p,title:t.title,type:'task',
-      startDate:r.start,endDate:r.end,done:!!t.done,milestone:false});
-  });
-  // Milestones — always type milestone
-  (allMs||[]).forEach(function(m){
-    if(!m.proj||!validIds.has(m.proj))return;
-    events.push({id:'ms-'+m.id,projectId:m.proj,title:m.label,type:'milestone',
-      startDate:m.date,endDate:m.date,done:false,milestone:true});
+
+  // Enrich with 'done' (getTimelineItems doesn't carry it — look up from state)
+  var events=normalized.map(function(e){
+    var done=e.type==='task'?getDone(e.id):false;
+    return{
+      id:e.id,
+      projectId:e.projectId,
+      title:e.title||'',
+      type:e.type,
+      startDate:e.startDate,
+      endDate:e.endDate,
+      duration:e.duration,
+      done:done,
+    };
   });
 
   if(!events.length)return'<p class="gantt-empty">Nenhum item com data encontrado.</p>';
@@ -1378,10 +1372,8 @@ function buildTimeline(allMs){
   },[TODAY]);
   var minD=new Date(Math.min.apply(null,allDates));
   var maxD=new Date(Math.max.apply(null,allDates));
-  // Pad 7 days on each side
   minD=new Date(minD.getTime()-7*86400000);
   maxD=new Date(maxD.getTime()+7*86400000);
-  // Snap minD to Monday for cleaner grid
   minD=new Date(minD.getTime()-(minD.getDay()||7-1)*86400000);
   var totalDays=Math.round((maxD-minD)/86400000);
   if(totalDays<1)totalDays=1;
@@ -1398,78 +1390,76 @@ function buildTimeline(allMs){
   // ── Month header ────────────────────────────────────────────────────────────
   var months=[];
   var cur=new Date(minD.getFullYear(),minD.getMonth(),1);
+  var MNAMES=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
   while(cur<=maxD){
-    var mo=cur.getMonth();
-    var yr=cur.getFullYear();
-    var moStart=new Date(yr,mo,1);
-    var moEnd=new Date(yr,mo+1,0);
+    var mo=cur.getMonth(),yr=cur.getFullYear();
+    var moStart=new Date(yr,mo,1),moEnd=new Date(yr,mo+1,0);
     var visStart=moStart<minD?minD:moStart;
     var visEnd=moEnd>maxD?maxD:moEnd;
-    var wPct=pctW(visStart,visEnd);
-    var NAMES=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
-    months.push('<div class="gantt-month" style="width:'+wPct+'%">'+NAMES[mo]+'</div>');
+    months.push('<div class="gantt-month" style="width:'+pctW(visStart,visEnd)+'%">'+MNAMES[mo]+'</div>');
     cur=new Date(yr,mo+1,1);
   }
 
-  // ── Week tick marks every 7 days ────────────────────────────────────────────
+  // ── Week ticks ──────────────────────────────────────────────────────────────
   var ticks='';
-  var d=new Date(minD);
-  while(d<=maxD){
-    var w=pctW(d,new Date(d.getTime()+6*86400000));
-    ticks+='<div class="gantt-tick" style="width:'+w+'%"></div>';
-    d=new Date(d.getTime()+7*86400000);
+  var td=new Date(minD);
+  while(td<=maxD){
+    ticks+='<div class="gantt-tick" style="width:'+pctW(td,new Date(td.getTime()+6*86400000))+'%"></div>';
+    td=new Date(td.getTime()+7*86400000);
   }
 
   // ── Today line ──────────────────────────────────────────────────────────────
-  var todayPct=pct(TODAY);
-  var todayLine='<div class="gantt-today-line" style="left:'+todayPct+'%">'
+  var todayLine='<div class="gantt-today-line" style="left:'+pct(TODAY)+'%">'
     +'<div class="gantt-today-tip">hoje</div></div>';
 
-  // ── One row per project ─────────────────────────────────────────────────────
+  // ── Rows — one per project ──────────────────────────────────────────────────
   var rows=PROJ_DEFS.map(function(proj){
     var projEvs=events.filter(function(e){return e.projectId===proj.id;});
-    if(!projEvs.length)return''; // hide projects with no events
-
-    // Sort by startDate for label collision avoidance
+    if(!projEvs.length)return'';
     projEvs.sort(function(a,b){return a.startDate-b.startDate;});
 
-    // Build items — track last label right-edge to avoid overlap
     var lastLabelRight=-1;
     var items=projEvs.map(function(e){
-      var isDone=e.done;
-      var doneClass=isDone?' done':'';
+      var doneClass=e.done?' done':'';
 
       if(e.type==='milestone'){
         var lp=pct(e.startDate);
-        var showLabel=(lp-lastLabelRight)>8;
-        var shortTitle=(e.title||'').length>18?(e.title||'').slice(0,16)+'…':(e.title||'');
-        var label=showLabel?'<div class="gantt-label" style="left:'+lp+'%;color:'+proj.color+';transform:translateX(-50%)">'+esc(shortTitle)+'</div>':'';
-        if(showLabel)lastLabelRight=lp+9;
-        return'<div class="gantt-diamond'+doneClass+'" style="left:'+lp+'%;background:'+proj.color+'" title="'+esc(e.title||'')+'"></div>'+label;
+        var showLbl=(lp-lastLabelRight)>8;
+        var st=(e.title.length>18?e.title.slice(0,16)+'…':e.title);
+        var lbl=showLbl?'<div class="gantt-label" style="left:'+lp+'%;color:'+proj.color
+          +';transform:translateX(-50%)">'+esc(st)+'</div>':'';
+        if(showLbl)lastLabelRight=lp+9;
+        return'<div class="gantt-diamond'+doneClass+'" style="left:'+lp+'%;background:'
+          +proj.color+'" title="'+esc(e.title)+'"></div>'+lbl;
       } else {
         var lp2=pct(e.startDate);
         var wp=pctW(e.startDate,e.endDate);
-        var shortTitle2=(e.title||'').length>20?(e.title||'').slice(0,18)+'…':(e.title||'');
-        var showLabel2=(lp2-lastLabelRight)>6;
-        var label2=showLabel2?'<div class="gantt-label" style="left:'+lp2+'%;color:'+proj.color+'">'+esc(shortTitle2)+'</div>':'';
-        if(showLabel2)lastLabelRight=lp2+wp+1;
-        return'<div class="gantt-bar'+doneClass+'" style="left:'+lp2+'%;width:'+wp+'%;background:'+proj.color+(isDone?';opacity:.3':'')+'" title="'+esc(e.title||'')+'"></div>'+label2;
+        var showLbl2=(lp2-lastLabelRight)>6;
+        var st2=(e.title.length>20?e.title.slice(0,18)+'…':e.title);
+        var lbl2=showLbl2?'<div class="gantt-label" style="left:'+lp2+'%;color:'+proj.color
+          +'">'+esc(st2)+'</div>':'';
+        if(showLbl2)lastLabelRight=lp2+wp+1;
+        return'<div class="gantt-bar'+doneClass+'" style="left:'+lp2+'%;width:'+wp+'%;background:'
+          +proj.color+(e.done?';opacity:.3':'')+'" title="'+esc(e.title)+'"></div>'+lbl2;
       }
     }).join('');
 
     var shortName=proj.label.length>14?proj.label.slice(0,12)+'…':proj.label;
     return'<div class="gantt-row">'
-      +'<div class="gantt-row-label"><div class="gantt-row-label-name" style="color:'+proj.color+'" title="'+esc(proj.label)+'">'+esc(shortName)+'</div></div>'
+      +'<div class="gantt-row-label"><div class="gantt-row-label-name" style="color:'+proj.color
+        +'" title="'+esc(proj.label)+'">'+esc(shortName)+'</div></div>'
       +'<div class="gantt-row-lane" style="position:relative">'+todayLine+items+'</div>'
       +'</div>'
       +'<div class="gantt-row-sep"></div>';
   }).join('');
 
-  // ── Legend ─────────────────────────────────────────────────────────────────
+  // ── Legend ──────────────────────────────────────────────────────────────────
   var legendProjs=PROJ_DEFS
     .filter(function(p){return events.some(function(e){return e.projectId===p.id;});})
-    .map(function(p){return'<div class="gantt-li"><div class="gantt-li-bar" style="background:'+p.color+'"></div>'+esc(p.label)+'</div>';})
-    .join('');
+    .map(function(p){
+      return'<div class="gantt-li"><div class="gantt-li-bar" style="background:'+p.color+'"></div>'
+        +esc(p.label)+'</div>';
+    }).join('');
   var legend='<div class="gantt-legend">'
     +legendProjs
     +'<div class="gantt-li"><div class="gantt-li-ms" style="background:var(--tx2)"></div>milestone</div>'
@@ -1483,6 +1473,7 @@ function buildTimeline(allMs){
     +rows
     +'</div></div>';
 }
+
 
 
 
