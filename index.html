@@ -996,29 +996,38 @@ function buildMsCard(projId,color,cls){
 }
 
 function buildMsList(proj,color){
-  // Sort milestones by date, nearest first
+  // ALL milestones from S.projectMilestones — single source of truth
   const raw=(S.projectMilestones||{})[proj]||[];
-  const ms=raw.slice().sort((a,b)=>{
+  if(!raw.length)return'';
+  // Sort by date ascending (nearest first)
+  const ms=raw.slice().sort(function(a,b){
     const da=parseMsDate(a.date),db=parseMsDate(b.date);
-    if(!da&&!db)return 0;if(!da)return 1;if(!db)return -1;
+    if(!da&&!db)return 0; if(!da)return 1; if(!db)return -1;
     return da-db;
   });
-  if(!ms.length)return'';
   const nearest=getNearestMilestone(proj);
-  const rows=ms.map(m=>{
+  const rows=ms.map(function(m){
     const isNearest=nearest&&m.id===nearest.id;
     const dObj=parseMsDate(m.date);
     const daysLeft=dObj?dlu(dObj):null;
-    const badge=isNearest?'<span style="font-size:10px;background:'+color+'22;color:'+color+';padding:1px 6px;border-radius:8px;font-weight:600">próximo</span>':'';
+    const badge=isNearest
+      ?'<span style="font-size:10px;background:'+color+'22;color:'+color
+        +';padding:1px 6px;border-radius:8px;font-weight:600">próximo</span>'
+      :'';
     return'<div class="ms-item" style="'+(isNearest?'border-color:'+color+'66;':'')+'">'
-      +'<span class="ms-pill" style="background:'+color+'22;color:'+color+'">'+esc(m.date||'?')+'</span>'
+      +'<span class="ms-pill" style="background:'+color+'22;color:'+color+'">'
+        +esc(m.date||'?')+'</span>'
       +'<span class="ms-txt">'+esc(m.label)+'</span>'
       +badge
-      +(daysLeft!==null?'<span style="font-size:11px;color:var(--tx3);margin-left:4px">'+daysLeft+'d</span>':'')
-      +(m.fixed?'':'<button class="ms-del" onclick="B.delMilestone(\''+proj+'\',\''+m.id+'\')">✕</button>')
+      +(daysLeft!==null
+        ?'<span style="font-size:11px;color:var(--tx3);margin-left:4px">'+daysLeft+'d</span>'
+        :'')
+      +'<button class="ms-del" onclick="B.delMilestone(\''+proj+'\',\''+m.id+'\')">'
+        +'✕</button>'
       +'</div>';
   }).join('');
-  return'<div class="sec">Milestones do projeto</div><div class="ms-list">'+rows+'</div>';
+  return'<div class="sec">Milestones do projeto</div>'
+    +'<div class="ms-list">'+rows+'</div>';
 }
 
 function buildTask(task){
@@ -1093,22 +1102,30 @@ function buildCustomView(p,allMs){
   const tasks=projTasks(p.id);
   const pend=tasks.filter(t=>!t.done),done=tasks.filter(t=>t.done);
   const c=p.color||'#888';
-  const ms=(S.projectMilestones||{})[p.id]||[];
-  const msHTML=ms.length?'<div class="sec">Milestones</div><div class="ms-list">'
-    +ms.map(m=>'<div class="ms-item"><span class="ms-pill" style="background:'+c+'22;color:'+c+'">'+esc(m.date)+'</span><span class="ms-txt">'+esc(m.label)+'</span><button class="ms-del" onclick="B.delMilestone(\''+p.id+'\',\''+m.id+'\')">✕</button></div>').join('')
-    +'</div>':'';
   return'<div '+(V===p.id?'':'hidden')+'>'
-    +buildMsCard(p.id,p.color||'#888','custom')
+    +buildMsCard(p.id,c,'custom')
     +buildAlerts(p.id,allMs)
     +'<div class="add-bar">'
     +buildDriveChip(p.id)
-    +'<button class="btn-sm" style="font-size:11px;color:var(--tx3)" onclick="B.archiveProject(\''+p.id+'\')">📦 arquivar</button>'
+    +'<button class="btn-sm" style="font-size:11px;color:var(--tx3)" '
+      +'onclick="B.archiveProject(\''+p.id+'\')">📦 arquivar</button>'
     +'<button class="btn-sm" onclick="B.openAddMilestone(\''+p.id+'\')">+ milestone</button>'
-    +'<button class="add-btn" style="border-color:'+c+'66;color:'+c+'" onclick="B.openAddTask(\''+p.id+'\')">+ tarefa</button>'
+    +'<button class="add-btn" style="border-color:'+c+'66;color:'+c+'" '
+      +'onclick="B.openAddTask(\''+p.id+'\')">+ tarefa</button>'
     +'</div>'
-    +msHTML
-    +(pend.length?'<div class="sec">Tarefas pendentes</div><div class="task-list">'+pend.map(t=>buildTask(t)).join('')+'</div>':'<p class="empty">Nenhuma tarefa pendente.</p>')
-    +(done.length?'<button class="done-tog" onclick="B.toggleDR(\''+p.id+'\')">'+(showDR[p.id]?'▾':'▸')+' concluídas ('+done.length+')</button>'+(showDR[p.id]?'<div class="task-list" style="margin-top:8px">'+done.map(t=>buildTask(t)).join('')+'</div>':''):'')
+    +buildMsList(p.id,c)
+    +(pend.length
+      ?'<div class="sec">Tarefas pendentes</div>'
+        +'<div class="task-list">'+pend.map(t=>buildTask(t)).join('')+'</div>'
+      :'<p class="empty">Nenhuma tarefa pendente.</p>')
+    +(done.length
+      ?'<button class="done-tog" onclick="B.toggleDR(\''+p.id+'\')">'
+          +(showDR[p.id]?'▾':'▸')+' concluídas ('+done.length+')</button>'
+          +(showDR[p.id]
+            ?'<div class="task-list" style="margin-top:8px">'
+              +done.map(t=>buildTask(t)).join('')+'</div>'
+            :'')
+      :'')
     +'</div>';
 }
 
