@@ -1204,6 +1204,135 @@ function parseTaskDate(dateStr){
 }
 
 
+
+// ── Timeline data layer (prep for Gantt — does not affect current render) ────
+
+/**
+ * parseDate(str) → {start: Date, end: Date} | null
+ * Handles: "17/04", "06/04–16/04", "06/04-16/04", "hoje",
+ *          "esta semana", "até 07/04", "a definir"
+ */
+function parseDate(str){
+  if(!str||str==='a definir')return null;
+  const s=str.toLowerCase().trim();
+  if(s==='hoje'||s==='agora'){
+    const d=new Date(TODAY); return{start:d,end:d,duration:0};
+  }
+  if(s.includes('esta semana')){
+    const d=new Date(TODAY);
+    const e=new Date(TODAY.getTime()+6*86400000);
+    return{start:d,end:e,duration:6};
+  }
+  // "até dd/mm"
+  const ateM=s.match(/at[eé]\s*(\d{1,2})\/(\d{1,2})/);
+  if(ateM){
+    const end=new Date(2026,parseInt(ateM[2])-1,parseInt(ateM[1]));
+    const dur=Math.max(0,Math.round((end-TODAY)/86400000));
+    return{start:new Date(TODAY),end,duration:dur};
+  }
+  // Range: "dd/mm–dd/mm" or "dd/mm-dd/mm" or "dd/mm – dd/mm"
+  const rangeM=str.match(/(\d{1,2})\/(\d{1,2})\s*[–\-]+\s*(\d{1,2})\/(\d{1,2})/);
+  if(rangeM){
+    const start=new Date(2026,parseInt(rangeM[2])-1,parseInt(rangeM[1]));
+    const end=new Date(2026,parseInt(rangeM[4])-1,parseInt(rangeM[3]));
+    const duration=Math.max(0,Math.round((end-start)/86400000));
+    return{start,end,duration};
+  }
+  // Single date: "dd/mm" (possibly "dd ou dd/mm" → take last match)
+  const singles=[...str.matchAll(/(\d{1,2})\/(\d{1,2})/g)];
+  if(singles.length){
+    const last=singles[singles.length-1];
+    const d=new Date(2026,parseInt(last[2])-1,parseInt(last[1]));
+    return{start:d,end:d,duration:0};
+  }
+  return null;
+}
+
+/**
+ * normalizeMilestones() → TimelineItem[]
+ * Reads from S.projectMilestones (single source of truth)
+ */
+function normalizeMilestones(){
+  const items=[];
+  const allProjIds=['n','r',...(S.customProjects||[]).map(p=>p.id)];
+  for(const projId of allProjIds){
+    for(const m of(S.projectMilestones||{})[projId]||[]){
+      if(!m.label||!m.date)continue;
+      const d=parseMsDate(m.date); // existing parser
+      if(!d)continue;
+      items.push({
+        id:m.id||('ms-'+projId+'-'+m.label.slice(0,8)),
+        projectId:projId,
+        title:m.label,
+        type:'milestone',
+        startDate:d,
+        endDate:d,
+        duration:0,
+      });
+    }
+  }
+  return items;
+}
+
+/**
+ * normalizeTasks() → TimelineItem[]
+ * Reads from TDEFS + S.customTasks, skips done and undated
+ */
+function normalizeTasks(){
+  const items=[];
+  const validProjs=new Set(['n','r',...(S.customProjects||[]).map(p=>p.id)]);
+
+  // Fixed task definitions
+  for(const t of TDEFS){
+    if(!validProjs.has(t.p))continue;
+    if(getDone(t.id))continue;
+    const range=parseDate(t.date);
+    if(!range)continue;
+    items.push({
+      id:t.id,
+      projectId:t.p,
+      title:t.title,
+      type:'task',
+      startDate:range.start,
+      endDate:range.end,
+      duration:range.duration,
+    });
+  }
+
+  // Custom tasks
+  for(const t of(S.customTasks||[])){
+    if(!t.p||!validProjs.has(t.p))continue;
+    if(t.done)continue;
+    const range=parseDate(t.date);
+    if(!range)continue;
+    items.push({
+      id:t.id,
+      projectId:t.p,
+      title:t.title,
+      type:'task',
+      startDate:range.start,
+      endDate:range.end,
+      duration:range.duration,
+    });
+  }
+
+  return items;
+}
+
+/**
+ * getTimelineItems() → TimelineItem[]
+ * Unified list: milestones + tasks, sorted by startDate
+ * This is the single entry point for future Gantt rendering
+ */
+function getTimelineItems(){
+  const ms=normalizeMilestones();
+  const tasks=normalizeTasks();
+  return[...ms,...tasks].sort(function(a,b){
+    return a.startDate-b.startDate;
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 function buildTimeline(allMs){
   // ── Collect all projects in display order ───────────────────────────────────
   const PROJ_DEFS=[
