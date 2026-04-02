@@ -252,8 +252,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--tx);min-h
 .ms-list{display:flex;flex-direction:column;gap:6px;margin-bottom:14px;}
 .ms-item{display:flex;align-items:center;gap:10px;padding:9px 13px;border-radius:var(--rads);border:0.5px solid var(--bd);background:var(--surf);font-size:13px;}
 .ms-pill{font-size:11px;font-weight:600;padding:2px 8px;border-radius:8px;white-space:nowrap;flex-shrink:0;}
-.ms-txt{color:var(--tx2);flex:1;}
-.ms-del{font-size:12px;color:var(--tx3);background:none;border:none;cursor:pointer;padding:2px 4px;border-radius:4px;transition:color .15s,background .15s;}
+.ms-txt{color:var(--tx2);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.ms-del{font-size:12px;color:var(--tx3);background:none;border:none;cursor:pointer;padding:2px 4px;border-radius:4px;transition:color .15s,background .15s;flex-shrink:0;margin-left:auto;}
 .ms-del:hover{color:var(--urg);background:var(--urgl);}
 
 /* ── milestone grid (overview) ────────────────────────────────────────────── */
@@ -507,14 +507,12 @@ const RP=[
 ];
 const DA={
   n:[
-    {id:'na1',type:'red',text:'⚑ Milestone: 17/04 — Touchpoint com Lili e Diego: 2 opções de conceito de marca.'},
     {id:'na2',type:'red',text:'Hoje: Agendar entrevistas, avisar palestrantes, marcar reunião Lili/Bruna/Bianca, emitir NF.'},
   ],
   r:[
     {id:'ra1',type:'red',text:'⚑ AGORA — até 03/04: Finalizar ideias coleção verão.'},
     {id:'ra2',type:'red',text:'⚑ 13/04: Apresentação das ideias + entrega do release "Abraço Brasileiro" pela Brux.'},
     {id:'ra3',type:'amber',text:'14/04: Reunião interna comitê — definir o que vai para o dia 29.'},
-    {id:'ra4',type:'amber',text:'⚑ Milestone final: 29/04 — Comitê com lideranças e Presidente da Riachuelo.'},
   ],
 };
 const PC=['#0F6E56','#533AB7','#A32D2D','#854F0B','#185FA5','#993556','#3B6D11','#D85A30'];
