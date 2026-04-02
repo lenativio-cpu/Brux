@@ -473,6 +473,13 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--tx);min-h
 .ms-next-days{font-size:28px;font-weight:300;letter-spacing:-0.02em;
   line-height:1;flex-shrink:0;text-align:right;}
 .ms-next-date{font-size:11px;opacity:.6;text-align:right;margin-top:2px;}
+
+/* postit edit hover */
+.postit{cursor:pointer;}
+.postit:hover{box-shadow:3px 5px 14px rgba(0,0,0,.16),0 1px 3px rgba(0,0,0,.09);}
+.postit-edit-hint{font-size:9px;color:rgba(0,0,0,.28);text-align:right;
+  margin-top:4px;letter-spacing:.03em;display:none;}
+.postit:hover .postit-edit-hint{display:block;}
 </style>
 </head>
 <body>
@@ -1182,7 +1189,7 @@ function buildMural(){
     const d=new Date(p.createdAt);
     const dateStr=d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})+' '+d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
     const projLabel=p.proj==='n'?'Natura':p.proj==='r'?'Riachuelo':((S.customProjects||[]).find(cp=>cp.id===p.proj)||{}).name||'';
-    return'<div class="postit" id="pit-'+p.id+'" draggable="true" style="background:'+p.color+';transform:'+rot+'" ondragstart="B.pitDs(event,this)" ondragover="B.pitDov(event,this)" ondragleave="B.pitDl(event,this)" ondrop="B.pitDd(event,this)">'        +'<div class="postit-emoji">'+p.emoji+'</div>'      +'<div class="postit-text">'+esc(p.text)+'</div>'      +'<div class="postit-meta">'      +'<div><div class="postit-author">'+esc(p.author)+'</div>'      +(projLabel?'<div class="postit-proj">'+esc(projLabel)+'</div>':'')      +'<div class="postit-date">'+dateStr+'</div></div>'      +'<button class="postit-del" onclick="B.delPostit(\''+p.id+'\')">✕</button>'      +'</div></div>';
+    return'<div class="postit" id="pit-'+p.id+'"' +' draggable="true"' +' style="background:'+p.color+';transform:'+rot+'"' +' onclick="B.openEditPostit(\''+p.id+'\')"' +' ondragstart="B.pitDs(event,this)"' +' ondragover="B.pitDov(event,this)"' +' ondragleave="B.pitDl(event,this)"' +' ondrop="B.pitDd(event,this)">'+'<div class="postit-emoji">'+p.emoji+'</div>'+'<div class="postit-text">'+esc(p.text)+'</div>'+'<div class="postit-edit-hint">clique para editar</div>'+'<div class="postit-meta">'+'<div><div class="postit-author">'+esc(p.author)+'</div>'+(projLabel?'<div class="postit-proj">'+esc(projLabel)+'</div>':'')+'<div class="postit-date">'+dateStr+'</div></div>'+'<button class="postit-del" onclick="event.stopPropagation();B.delPostit(\''+p.id+'\')">✕</button>'+'</div></div>';
   }).join(''):'<div class="mural-empty"><div class="mural-empty-icon">📌</div><div>Nenhuma nota ainda.<br>Crie a primeira!</div></div>';
 
   return'<div class="mural-wrap">'    +'<div class="mural-toolbar">'    +'<div class="mural-filter">'+filterBtns+'</div>'    +'<button class="mural-add-btn" onclick="B.openAddPostit()">+ nova nota</button>'    +'</div>'    +'<div class="postit-grid">'+cards+'</div>'    +'</div>';
@@ -1903,6 +1910,60 @@ B.confirmPostit=async function(){
   B.closeModal();await save('Nota adicionada ✓');render();
 };
 
+
+B.openEditPostit=function(id){
+  const pit=(S.postits||[]).find(function(p){return p.id===id;});
+  if(!pit)return;
+  const colorSwatches=POSTIT_COLORS.map(function(c){
+    const sel=c.bg===pit.color;
+    return'<div style="width:28px;height:28px;border-radius:50%;background:'+c.bg
+      +';cursor:pointer;border:2px solid '+(sel?'var(--tx)':'transparent')
+      +';transition:border-color .15s;" onclick="B.pickPostitColor(\''+c.bg+'\',this)"'
+      +' data-c="'+c.bg+'" title="'+c.name+'"></div>';
+  }).join('');
+  const emojiPicker=POSTIT_EMOJIS.map(function(e){
+    const sel=e===pit.emoji;
+    return'<button style="font-size:20px;background:none;border:1.5px solid '
+      +(sel?'var(--tx)':'var(--bd)')+';border-radius:6px;padding:3px 6px;cursor:pointer;"'
+      +' onclick="B.pickPostitEmoji(\''+e+'\',this)" data-e="'+e+'">'+e+'</button>';
+  }).join('');
+  showModal(
+    '<div class="modal-ov" onclick="if(event.target===this)B.closeModal()">'
+    +'<div class="modal"><div class="modal-drag"></div><h3>Editar nota</h3>'
+    +'<input type="hidden" id="pit-edit-id" value="'+esc(id)+'">'
+    +'<div class="mf"><label class="ml">Emoji</label>'
+    +'<div class="ew" id="pit-em">'+emojiPicker+'</div></div>'
+    +'<div class="mf"><label class="ml">Cor</label>'
+    +'<div style="display:flex;gap:8px;flex-wrap:wrap" id="pit-cl">'+colorSwatches+'</div></div>'
+    +'<div class="mf"><label class="ml" for="pit-txt">Nota</label>'
+    +'<textarea class="mi" id="pit-txt" rows="4" style="resize:none;line-height:1.55;">'+esc(pit.text)+'</textarea></div>'
+    +'<div class="merr" id="pit-e"></div>'
+    +'<div class="ma"><button class="mc" onclick="B.closeModal()">Cancelar</button>'
+    +'<button class="mok" style="background:var(--tx)" onclick="B.saveEditPostit()">Salvar</button>'
+    +'</div></div></div>'
+  );
+  setTimeout(function(){
+    const el=document.getElementById('pit-txt');
+    if(el){el.focus();el.setSelectionRange(el.value.length,el.value.length);}
+  },80);
+};
+
+B.saveEditPostit=async function(){
+  const id=(document.getElementById('pit-edit-id')||{value:''}).value;
+  const text=(document.getElementById('pit-txt')||{value:''}).value.trim();
+  if(!text){const e=document.getElementById('pit-e');if(e)e.textContent='Escreva alguma coisa.';return;}
+  const selColor=document.querySelector('#pit-cl div[style*="var(--tx)"]');
+  const color=selColor?selColor.dataset.c:POSTIT_COLORS[0].bg;
+  const selEmoji=document.querySelector('#pit-em button[style*="var(--tx)"]');
+  const emoji=selEmoji?selEmoji.dataset.e:POSTIT_EMOJIS[0];
+  const pit=(S.postits||[]).find(function(p){return p.id===id;});
+  if(!pit)return;
+  pit.text=text;
+  pit.emoji=emoji;
+  pit.color=color;
+  pit.updatedAt=Date.now();
+  B.closeModal();await save('Nota atualizada ✓');render();
+};
 B.delPostit=async function(id){
   S.postits=(S.postits||[]).filter(p=>p.id!==id);
   await save('Nota removida');render();
