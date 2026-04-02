@@ -505,16 +505,7 @@ const RP=[
   {name:'Alinhamento',tids:['r2','r3','r4','r5']},
   {name:'Preparação',tids:['r6']},{name:'Comitê',tids:['r7']},
 ];
-const DA={
-  n:[
-    {id:'na2',type:'red',text:'Hoje: Agendar entrevistas, avisar palestrantes, marcar reunião Lili/Bruna/Bianca, emitir NF.'},
-  ],
-  r:[
-    {id:'ra1',type:'red',text:'⚑ AGORA — até 03/04: Finalizar ideias coleção verão.'},
-    {id:'ra2',type:'red',text:'⚑ 13/04: Apresentação das ideias + entrega do release "Abraço Brasileiro" pela Brux.'},
-    {id:'ra3',type:'amber',text:'14/04: Reunião interna comitê — definir o que vai para o dia 29.'},
-  ],
-};
+const DA={n:[],r:{}};  // alerts removed — milestones shown via buildMsCard
 const PC=['#0F6E56','#533AB7','#A32D2D','#854F0B','#185FA5','#993556','#3B6D11','#D85A30'];
 const PE=['🎯','🚀','💡','⚡','🌟','🎨','📐','🔥'];
 // Status — order = sort priority
@@ -572,7 +563,7 @@ async function init(){
       // Purge stale milestone-text alerts from S.projectAlerts
       // (they were copied from old DA defaults and are now shown via buildMsCard instead)
       if(!S._alertsCleaned){
-        const msPatterns=['Milestone','milestone','17/04','29/04'];
+        const msPatterns=['Milestone','milestone','17/04','29/04','Agendar entrevistas','03/04','13/04','14/04','Abraço Brasileiro','Reunião interna','Milestone final','AGORA'];
         ['n','r',...(S.customProjects||[]).map(p=>p.id)].forEach(function(proj){
           if(Array.isArray((S.projectAlerts||{})[proj])){
             const before=S.projectAlerts[proj].length;
@@ -975,18 +966,12 @@ function buildPropsCard(props){
 // buildAlerts: milestone alerts (auto, read-only) + editable user alerts
 function buildAlerts(proj,allMs){
   const rawStored=(S.projectAlerts||{})[proj]||[];
-  // Filter out sentinel entries
   const userStored=rawStored.filter(function(a){return a.id!=='__cleared__';});
-  // If sentinel exists → user explicitly cleared all → show only + alerta
-  const hasSentinel=rawStored.some(function(a){return a.id==='__cleared__';});
-  const source=hasSentinel?[]:userStored.length>0?userStored:(DA[proj]||[]);
-
-  if(!source.length){
+  if(!userStored.length){
     return'<button class="add-alert" onclick="B.addAlert(\''+proj+'\')">+ alerta</button>';
   }
-
-  const rows=source.map(function(a){
-    const aid=a.id||('da-'+Math.random().toString(36).slice(2,8));
+  const rows=userStored.map(function(a){
+    const aid=a.id||uid();
     return'<div class="alert '+a.type+'">'
       +'<textarea class="alert-inp" rows="1" oninput="ar(this)"'
       +' onblur="B.saveAlertById(\''+proj+'\',\''+aid+'\',this.value)">'
@@ -1493,6 +1478,12 @@ B.saveAlertById=async function(proj,aid,val){
   if(a)a.text=val;
   await save('Alerta salvo ✓');
 };;
+B.delAlertById=async function(proj,aid){
+  if(!S.projectAlerts)S.projectAlerts={};
+  if(!Array.isArray(S.projectAlerts[proj]))S.projectAlerts[proj]=[];
+  S.projectAlerts[proj]=S.projectAlerts[proj].filter(function(a){return a.id!==aid;});
+  await save('Alerta removido');render();
+}
 B.delAlertById=async function(proj,aid){
   if(!S.projectAlerts)S.projectAlerts={};
   // If showing DA defaults, copy them first so we can delete
