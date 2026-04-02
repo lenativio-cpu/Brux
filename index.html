@@ -387,51 +387,77 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--tx);min-h
 .drive-chip.add{color:var(--tx3);border-style:dashed;}
 .drive-chip.add:hover{color:var(--n);border-color:var(--n);}
 
-/* ── Timeline ───────────────────────────────────────────────────────────────── */
-.tl-root{padding-bottom:40px;}
+/* ── Timeline redesign ──────────────────────────────────────────────────────── */
+
+/* wrapper */
+.tl-root{font-family:'DM Sans',sans-serif;}
+
 /* legend */
-.tl-legend{display:flex;gap:20px;flex-wrap:wrap;margin-bottom:32px;align-items:center;}
+.tl-legend{display:flex;gap:20px;flex-wrap:wrap;margin-bottom:28px;align-items:center;}
 .tl-li{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--tx2);}
 .tl-li-ms{width:10px;height:10px;transform:rotate(45deg);border-radius:2px;flex-shrink:0;}
-.tl-li-arc{width:28px;height:5px;border-radius:3px;opacity:.5;flex-shrink:0;}
+.tl-li-bar{width:26px;height:8px;border-radius:3px;flex-shrink:0;}
 .tl-li-today{width:2px;height:16px;background:var(--urg);border-radius:1px;flex-shrink:0;}
-/* scroll */
-.tl-chart{overflow-x:auto;}
+
+/* chart scroll */
+.tl-chart{overflow-x:auto;border-radius:var(--rads);border:1px solid var(--bd);}
 .tl-chart::-webkit-scrollbar{height:4px;}
 .tl-chart::-webkit-scrollbar-thumb{background:var(--bd);border-radius:2px;}
-.tl-inner{min-width:640px;}
-/* month grid */
-.tl-grid{display:flex;margin-left:160px;border-bottom:1px solid var(--bd);}
-.tl-mo{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;
-  color:var(--tx3);padding:0 0 6px 8px;border-left:1px solid var(--bd);box-sizing:border-box;}
-/* project row */
-.tl-proj{display:flex;align-items:center;border-bottom:1px solid var(--bd);min-height:72px;}
-/* label */
-.tl-label{width:160px;flex-shrink:0;padding-right:16px;text-align:right;
-  font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;
-  color:var(--tx2);display:flex;align-items:center;justify-content:flex-end;gap:8px;}
-.tl-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
-/* lane */
-.tl-lane{flex:1;position:relative;height:72px;}
-/* single arc bar — sits on the center line */
-.tl-arc{position:absolute;top:50%;transform:translateY(-50%);
-  height:6px;border-radius:3px;opacity:.4;min-width:6px;}
-/* milestone — diamond centred on baseline, label above */
+.tl-inner{min-width:640px;position:relative;}
+
+/* ── header row ── */
+.tl-header{display:flex;border-bottom:2px solid var(--bd);background:var(--surf);}
+.tl-header-label{width:140px;flex-shrink:0;padding:10px 14px;
+  font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;
+  color:var(--tx3);border-right:1px solid var(--bd);}
+.tl-header-months{flex:1;display:flex;}
+.tl-mo{position:relative;padding:10px 0 10px 10px;
+  font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:var(--tx3);
+  border-left:1px solid var(--bd);box-sizing:border-box;}
+
+/* ── project row ── */
+.tl-proj{display:flex;border-bottom:1px solid var(--bd);}
+.tl-proj:last-child{border-bottom:none;}
+.tl-proj-label{width:140px;flex-shrink:0;padding:0 14px;
+  display:flex;align-items:center;gap:8px;
+  border-right:1px solid var(--bd);background:var(--surf);}
+.tl-proj-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.tl-proj-name{font-size:11px;font-weight:600;color:var(--tx2);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+
+/* ── lane ── */
+.tl-lane{flex:1;position:relative;height:64px;background:var(--bg);}
+
+/* vertical grid lines — rendered per month via JS */
+.tl-vline{position:absolute;top:0;bottom:0;width:1px;background:var(--bd);opacity:.5;pointer-events:none;}
+
+/* today line */
+.tl-today{position:absolute;top:0;bottom:0;width:2px;
+  background:var(--urg);z-index:10;pointer-events:none;}
+.tl-today-lbl{position:absolute;bottom:calc(100% + 4px);left:50%;transform:translateX(-50%);
+  font-size:8px;font-weight:700;color:var(--urg);white-space:nowrap;
+  background:var(--bg);padding:1px 4px;border-radius:3px;border:1px solid var(--urg);}
+
+/* main work bar */
+.tl-bar{position:absolute;top:50%;transform:translateY(-50%);
+  height:10px;border-radius:5px;min-width:6px;opacity:.55;}
+
+/* milestone — sits ON the bar, diamond centred on bar midline */
 .tl-ms{position:absolute;top:50%;transform:translate(-50%,-50%);
   display:flex;flex-direction:column;align-items:center;z-index:6;cursor:default;}
-.tl-ms-lbl{font-size:9px;font-weight:600;white-space:nowrap;max-width:88px;
+.tl-ms-diamond{width:16px;height:16px;transform:rotate(45deg);
+  border-radius:3px;flex-shrink:0;box-shadow:0 0 0 2px var(--bg);
+  transition:transform .15s;}
+.tl-ms:hover .tl-ms-diamond{transform:rotate(45deg) scale(1.18);}
+.tl-ms-lbl{position:absolute;bottom:calc(100% + 8px);
+  left:50%;transform:translateX(-50%);
+  font-size:9px;font-weight:600;white-space:nowrap;max-width:96px;
   overflow:hidden;text-overflow:ellipsis;text-align:center;
-  margin-bottom:6px;padding:2px 6px;border-radius:4px;line-height:1.3;}
-.tl-ms-diamond{width:14px;height:14px;transform:rotate(45deg);border-radius:2px;
-  flex-shrink:0;transition:transform .15s;}
-.tl-ms:hover .tl-ms-diamond{transform:rotate(45deg) scale(1.2);}
-/* today line */
-.tl-today{position:absolute;top:0;bottom:0;width:2px;background:var(--urg);
-  z-index:10;pointer-events:none;border-radius:1px;}
-.tl-today-lbl{position:absolute;top:8px;left:5px;font-size:9px;font-weight:700;
-  color:var(--urg);white-space:nowrap;background:var(--bg);padding:0 3px;border-radius:2px;}
+  padding:2px 6px;border-radius:4px;line-height:1.35;pointer-events:none;}
+
 /* empty */
 .tl-empty{text-align:center;padding:56px 0;color:var(--tx3);font-size:13px;}
+
 
 /* postit edit hover */
 .postit{cursor:pointer;}
@@ -1341,7 +1367,7 @@ function getTimelineItems(){
 
 // ─────────────────────────────────────────────────────────────────────────────
 function buildTimeline(allMs){
-  /* Project definitions */
+  /* Project list */
   var PROJ=[
     {id:'n',label:'Natura MMBB',color:'#0F6E56'},
     {id:'r',label:'Riachuelo',color:'#534AB7'},
@@ -1351,14 +1377,16 @@ function buildTimeline(allMs){
   });
   var ids=new Set(PROJ.map(function(p){return p.id;}));
 
-  /* Unified data */
-  var items=getTimelineItems().filter(function(e){return e.projectId&&ids.has(e.projectId);});
+  /* Data */
+  var items=getTimelineItems().filter(function(e){
+    return e.projectId&&ids.has(e.projectId);
+  });
   if(!items.length)return'<p class="tl-empty">Nenhum item com data encontrado.</p>';
 
-  /* Date window — full months, always includes today */
-  var dates=items.reduce(function(a,e){a.push(e.startDate,e.endDate);return a;},[TODAY]);
-  var lo=new Date(Math.min.apply(null,dates));
-  var hi=new Date(Math.max.apply(null,dates));
+  /* Date window — snap to full months, always includes today */
+  var allD=items.reduce(function(a,e){a.push(e.startDate,e.endDate);return a;},[TODAY]);
+  var lo=new Date(Math.min.apply(null,allD));
+  var hi=new Date(Math.max.apply(null,allD));
   var minD=new Date(lo.getFullYear(),lo.getMonth(),1);
   var maxD=new Date(hi.getFullYear(),hi.getMonth()+2,0);
   var span=Math.max(1,Math.round((maxD-minD)/864e5));
@@ -1366,22 +1394,23 @@ function buildTimeline(allMs){
   function pct(d){return Math.max(0,Math.min(100,Math.round((d-minD)/864e5)/span*100));}
   function pw(s,e){return Math.max(.3,Math.max(1,Math.round((e-s)/864e5)+1)/span*100);}
 
-  /* Month grid */
+  /* Month columns — header cells + grid line positions */
   var MO=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
-  var grid='';
+  var months=''; var gridLines=''; var gridLinesToday='';
   var mc=new Date(minD.getFullYear(),minD.getMonth(),1);
   while(mc<=maxD){
     var m=mc.getMonth(),y=mc.getFullYear();
     var me=new Date(y,m+1,0);
-    grid+='<div class="tl-mo" style="width:'+pw(mc,me>maxD?maxD:me)+'%">'+MO[m]+'</div>';
+    var w=pw(mc,me>maxD?maxD:me);
+    months+='<div class="tl-mo" style="width:'+w+'%">'+MO[m]+'</div>';
+    gridLines+='<div class="tl-vline" style="left:'+pct(mc)+'%"></div>';
     mc=new Date(y,m+1,1);
   }
 
-  /* Today line — one per lane, rendered inside each */
+  /* Today line — shared across all lanes via position:absolute on tl-lane */
   var tp=pct(TODAY);
-  function todayEl(){
-    return'<div class="tl-today" style="left:'+tp+'%"><div class="tl-today-lbl">hoje</div></div>';
-  }
+  var todayEl='<div class="tl-today" style="left:'+tp+'%">'
+    +'<div class="tl-today-lbl">hoje</div></div>';
 
   /* Project rows */
   var rows=PROJ.map(function(proj){
@@ -1392,31 +1421,38 @@ function buildTimeline(allMs){
     var ms=evs.filter(function(e){return e.type==='milestone';})
               .sort(function(a,b){return a.startDate-b.startDate;});
 
-    /* Single arc — full work span of all tasks */
-    var arc='';
+    /* Single work bar — full span of all tasks */
+    var bar='';
     if(tasks.length){
       var s=new Date(Math.min.apply(null,tasks.map(function(t){return t.startDate;})));
       var e=new Date(Math.max.apply(null,tasks.map(function(t){return t.endDate;})));
-      arc='<div class="tl-arc" style="left:'+pct(s)+'%;width:'+pw(s,e)+'%;background:'+proj.color+'"></div>';
+      bar='<div class="tl-bar" style="left:'+pct(s)+'%;width:'+pw(s,e)+'%;background:'+proj.color+'"></div>';
     }
 
-    /* Milestone diamonds with anti-overlap labels */
-    var prevPct=-999;
+    /* Milestone diamonds ON the bar, labels above */
+    /* Anti-overlap: track x positions; if a new label would overlap the previous,
+       shift it to a secondary tier (margin-top bump) */
+    var prevLblRight=-999;
     var diamonds=ms.map(function(m){
       var lp=pct(m.startDate);
-      var flip=lp-prevPct<13;   // too close → flip label below diamond
-      prevPct=lp;
-      var short=m.title.length>17?m.title.slice(0,15)+'\u2026':m.title;
-      var lbl='<div class="tl-ms-lbl" style="color:'+proj.color+';background:'+proj.color+'18">'+esc(short)+'</div>';
-      return'<div class="tl-ms" style="left:'+lp+'%;'+(flip?'flex-direction:column-reverse;margin-top:22px':'margin-top:-22px')+'" title="'+esc(m.title)+'">'
-        +lbl
+      var short=m.title.length>15?m.title.slice(0,13)+'\u2026':m.title;
+      /* Each label is ~96px wide max; 96/chartWidth ≈ depends on viewport.
+         Use percentage: 96px on 800px lane ≈ 12%. Use 11% as threshold. */
+      var lblLeft=lp-5.5; /* label centre at lp, half-width ~5.5% */
+      var overlap=lblLeft<prevLblRight+1;
+      prevLblRight=lblLeft+11;
+      return'<div class="tl-ms" style="left:'+lp+'%;'+(overlap?'margin-top:30px':'')+'" title="'+esc(m.title)+'">'
+        +'<div class="tl-ms-lbl" style="color:'+proj.color+';background:'+proj.color+'1a">'+esc(short)+'</div>'
         +'<div class="tl-ms-diamond" style="background:'+proj.color+'"></div>'
         +'</div>';
     }).join('');
 
     return'<div class="tl-proj">'
-      +'<div class="tl-label"><div class="tl-dot" style="background:'+proj.color+'"></div>'+esc(proj.label)+'</div>'
-      +'<div class="tl-lane">'+todayEl()+arc+diamonds+'</div>'
+      +'<div class="tl-proj-label">'
+      +'<div class="tl-proj-dot" style="background:'+proj.color+'"></div>'
+      +'<div class="tl-proj-name" title="'+esc(proj.label)+'">'+esc(proj.label)+'</div>'
+      +'</div>'
+      +'<div class="tl-lane">'+gridLines+bar+diamonds+'</div>'
       +'</div>';
   }).join('');
 
@@ -1424,18 +1460,32 @@ function buildTimeline(allMs){
   var active=PROJ.filter(function(p){return items.some(function(e){return e.projectId===p.id;});});
   var legend='<div class="tl-legend">'
     +active.map(function(p){
-      return'<div class="tl-li"><div class="tl-li-ms" style="background:'+p.color+'"></div>'+esc(p.label)+'</div>';
+      return'<div class="tl-li">'
+        +'<div class="tl-li-bar" style="background:'+p.color+'"></div>'
+        +esc(p.label)+'</div>';
     }).join('')
-    +'<div class="tl-li"><div class="tl-li-arc" style="background:var(--tx3)"></div>período de trabalho</div>'
+    +'<div class="tl-li"><div class="tl-li-ms" style="background:var(--tx2)"></div>milestone</div>'
     +'<div class="tl-li"><div class="tl-li-today"></div>hoje</div>'
     +'</div>';
 
+  /* Header row */
+  var header='<div class="tl-header">'
+    +'<div class="tl-header-label">projeto</div>'
+    +'<div class="tl-header-months">'+months+'</div>'
+    +'</div>';
+
+  /* Single today line over all rows, offset past the label column */
+  var todayOverlay='<div style="position:absolute;left:calc(140px + '+tp+'% * (100% - 140px) / 100);top:0;bottom:0;width:2px;background:var(--urg);z-index:10;pointer-events:none;">'
+    +'<div style="position:absolute;bottom:calc(100% + 3px);left:5px;font-size:8px;font-weight:700;color:var(--urg);white-space:nowrap;background:var(--bg);padding:1px 4px;border-radius:3px;border:1px solid var(--urg);">hoje</div></div>';
   return'<div class="tl-root">'+legend
     +'<div class="tl-chart"><div class="tl-inner">'
-    +'<div class="tl-grid">'+grid+'</div>'
-    +rows
+    +header
+    +'<div style="position:relative;">'+todayOverlay+rows+'</div>'
     +'</div></div></div>';
+
 }
+
+
 
 
 
