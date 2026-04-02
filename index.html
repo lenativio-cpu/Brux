@@ -1472,18 +1472,18 @@ function buildTimeline(allMs){
     mc=new Date(y,m+1,1);
   }
 
-  /* Today line — shared across all lanes via position:absolute on tl-lane */
   var tp=pct(TODAY);
-  var todayEl='<div class="tl-today" style="left:'+tp+'%">'
-    +'<div class="tl-today-lbl">hoje</div></div>';
 
   /* Project rows */
   var MIN_TASK_DAYS=2;
   var MS_GAP=15;
 
+  var firstProjSeen=false;
   var rows=PROJ.map(function(proj){
     var evs=items.filter(function(e){return e.projectId===proj.id;});
     if(!evs.length)return'';
+    var showLbl=!firstProjSeen;firstProjSeen=true;
+    var todayLine='<div class="tl-today" style="left:'+tp+'%">'+(showLbl?'<div class="tl-today-lbl">hoje</div>':'')+'</div>';
     var blocks=evs.filter(function(e){return e.type==='block';});
     var tasks =evs.filter(function(e){return e.type==='task';});
     var ms    =evs.filter(function(e){return e.type==='milestone';})
@@ -1523,7 +1523,7 @@ function buildTimeline(allMs){
     return'<div class="tl-proj">'
       +'<div class="tl-proj-label"><div class="tl-proj-dot" style="background:'+proj.color+'"></div>'
       +'<div class="tl-proj-name" title="'+esc(proj.label)+'">'+esc(proj.label)+'</div></div>'
-      +'<div class="tl-lane">'+gridLines+bar+diamonds+'</div>'
+      +'<div class="tl-lane">'+gridLines+todayLine+bar+diamonds+'</div>'
       +'</div>';
   }).join('');
   /* Legend */
@@ -1541,19 +1541,15 @@ function buildTimeline(allMs){
   /* Header row */
   var header='<div class="tl-header">'
     +'<div class="tl-header-label">projeto</div>'
-    +'<div class="tl-header-months">'+months+'</div>'
-    +'</div>';
+    +'<div class="tl-header-months">'+months+'</div></div>';
 
-  /* Single today line over all rows, offset past the label column */
-  var todayOverlay='<div style="position:absolute;left:calc(140px + '+tp+'% * (100% - 140px) / 100);top:0;bottom:0;width:2px;background:var(--urg);z-index:10;pointer-events:none;">'
-    +'<div style="position:absolute;bottom:calc(100% + 3px);left:5px;font-size:8px;font-weight:700;color:var(--urg);white-space:nowrap;background:var(--bg);padding:1px 4px;border-radius:3px;border:1px solid var(--urg);">hoje</div></div>';
   return'<div class="tl-root">'+legend
     +'<div class="tl-chart"><div class="tl-inner">'
-    +header
-    +'<div style="position:relative;">'+todayOverlay+rows+'</div>'
+    +header+rows
     +'</div></div></div>';
 
 }
+
 
 
 
