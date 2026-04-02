@@ -391,88 +391,71 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--tx);min-h
 .tl-root{padding-bottom:32px;}
 
 /* Legend */
-.tl-legend{display:flex;gap:20px;flex-wrap:wrap;margin-bottom:24px;align-items:center;}
+.tl-legend{display:flex;gap:20px;flex-wrap:wrap;margin-bottom:28px;align-items:center;}
 .tl-li{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--tx2);}
 .tl-li-ms{width:11px;height:11px;transform:rotate(45deg);border-radius:2px;flex-shrink:0;}
-.tl-li-bar{width:22px;height:5px;border-radius:3px;opacity:.4;flex-shrink:0;}
-.tl-li-today{width:2px;height:15px;background:var(--urg);border-radius:1px;flex-shrink:0;}
+.tl-li-arc{width:28px;height:4px;border-radius:2px;opacity:.45;flex-shrink:0;}
+.tl-li-today{width:2px;height:16px;background:var(--urg);border-radius:1px;flex-shrink:0;}
 
-/* Scroll wrapper */
+/* Scroll area */
 .tl-chart{overflow-x:auto;padding-bottom:8px;}
 .tl-chart::-webkit-scrollbar{height:4px;}
 .tl-chart::-webkit-scrollbar-thumb{background:var(--bd);border-radius:2px;}
-.tl-inner{min-width:680px;position:relative;padding-bottom:8px;}
+.tl-inner{min-width:680px;position:relative;}
 
 /* Month header */
-.tl-months{display:flex;margin-left:130px;margin-bottom:0;}
+.tl-months{display:flex;margin-left:150px;margin-bottom:0;}
 .tl-mo{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;
-  color:var(--tx3);padding:0 0 8px 10px;border-left:1px solid var(--bd);
-  border-bottom:1px solid var(--bd);box-sizing:border-box;}
+  color:var(--tx3);padding:0 0 8px 10px;
+  border-left:1px solid var(--bd);border-bottom:1px solid var(--bd);
+  box-sizing:border-box;}
 
-/* Per-project block */
-.tl-proj{display:flex;align-items:stretch;margin-top:0;
-  border-bottom:1px solid var(--bd);}
+/* Project row */
+.tl-proj{display:flex;align-items:stretch;border-bottom:1px solid var(--bd);}
 .tl-proj:first-of-type{border-top:1px solid var(--bd);}
 
-/* Left label column */
-.tl-proj-label{width:130px;flex-shrink:0;padding:16px 14px 16px 0;
-  display:flex;flex-direction:column;justify-content:center;text-align:right;}
-.tl-proj-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;
-  display:inline-block;margin-right:6px;vertical-align:middle;}
-.tl-proj-name{font-size:11px;font-weight:700;text-transform:uppercase;
-  letter-spacing:.06em;color:var(--tx2);line-height:1.3;}
+/* Label column */
+.tl-proj-label{width:150px;flex-shrink:0;padding:20px 14px 20px 0;
+  display:flex;align-items:center;justify-content:flex-end;
+  font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;
+  color:var(--tx2);gap:7px;text-align:right;}
+.tl-proj-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
 
 /* Lane */
-.tl-lane{flex:1;position:relative;padding:14px 0 14px 0;min-height:72px;box-sizing:border-box;}
+.tl-lane{flex:1;position:relative;min-height:80px;}
 
-/* Baseline — horizontal rule at milestone level */
+/* Baseline */
 .tl-baseline{position:absolute;left:0;right:0;top:50%;
-  height:1px;background:var(--bd);opacity:.6;}
+  height:1px;background:var(--bd);opacity:.7;}
 
-/* Task bars — thin strip below baseline */
-.tl-bar{position:absolute;height:5px;border-radius:3px;
-  top:calc(50% + 10px);opacity:.3;min-width:3px;cursor:default;
-  transition:opacity .15s;}
-.tl-bar:hover{opacity:.55;}
-.tl-bar.done{opacity:.12;}
-
-/* Milestone — diamond + label above baseline */
-.tl-ms{position:absolute;display:flex;flex-direction:column;
-  align-items:center;cursor:default;z-index:4;
-  transform:translateX(-50%);top:0;bottom:0;justify-content:center;}
-.tl-ms-lbl{font-size:9px;font-weight:600;white-space:nowrap;
-  max-width:82px;overflow:hidden;text-overflow:ellipsis;
-  text-align:center;line-height:1.25;letter-spacing:.01em;
-  margin-bottom:5px;padding:2px 5px;border-radius:4px;}
-.tl-ms-diamond{width:13px;height:13px;transform:rotate(45deg);
-  border-radius:2px;flex-shrink:0;transition:transform .15s;}
-.tl-ms:hover .tl-ms-diamond{transform:rotate(45deg) scale(1.2);}
+/* Arc bar — single work-period span */
+.tl-arc{position:absolute;height:6px;border-radius:3px;
+  top:calc(50% - 3px);opacity:.38;min-width:4px;}
 
 /* Today line */
 .tl-today{position:absolute;top:0;bottom:0;width:2px;border-radius:1px;
   background:var(--urg);z-index:10;pointer-events:none;}
-.tl-today-lbl{position:absolute;top:-1px;left:5px;
+.tl-today-lbl{position:absolute;top:6px;left:5px;
   font-size:9px;color:var(--urg);font-weight:700;white-space:nowrap;
-  background:var(--bg);padding:0 2px;}
+  background:var(--bg);padding:0 2px;border-radius:2px;}
+
+/* Milestone */
+.tl-ms{position:absolute;display:flex;flex-direction:column;
+  align-items:center;z-index:5;transform:translateX(-50%);}
+.tl-ms-above{top:0;bottom:50%;justify-content:flex-end;}
+.tl-ms-below{top:50%;bottom:0;justify-content:flex-start;}
+.tl-ms-diamond{width:16px;height:16px;transform:rotate(45deg);border-radius:3px;
+  flex-shrink:0;transition:transform .15s;}
+.tl-ms:hover .tl-ms-diamond{transform:rotate(45deg) scale(1.18);}
+.tl-ms-lbl{font-size:9px;font-weight:600;white-space:nowrap;
+  max-width:90px;overflow:hidden;text-overflow:ellipsis;
+  text-align:center;line-height:1.3;letter-spacing:.01em;
+  padding:2px 5px;border-radius:4px;}
+.tl-ms-lbl-above{margin-bottom:5px;}
+.tl-ms-lbl-below{margin-top:5px;}
 
 /* Empty */
 .tl-empty{text-align:center;padding:52px 0;color:var(--tx3);font-size:13px;}
-
-/* milestone highlight card */
-.ms-next-card{border-radius:var(--rads);padding:14px 18px;margin-bottom:16px;
-  display:flex;align-items:center;gap:14px;border:0.5px solid;}
-.ms-next-card.n{background:var(--nl);border-color:var(--nb);}
-.ms-next-card.r{background:var(--rl);border-color:var(--rb);}
-.ms-next-card.custom{background:var(--surf);}
-.ms-next-icon{font-size:18px;line-height:1;flex-shrink:0;}
-.ms-next-body{flex:1;min-width:0;}
-.ms-next-label{font-size:11px;font-weight:600;text-transform:uppercase;
-  letter-spacing:.06em;opacity:.65;margin-bottom:2px;}
-.ms-next-title{font-size:14px;font-weight:600;line-height:1.3;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.ms-next-days{font-size:28px;font-weight:300;letter-spacing:-0.02em;
-  line-height:1;flex-shrink:0;text-align:right;}
-.ms-next-date{font-size:11px;opacity:.6;text-align:right;margin-top:2px;}
 
 /* postit edit hover */
 .postit{cursor:pointer;}
@@ -1382,7 +1365,7 @@ function getTimelineItems(){
 
 // ─────────────────────────────────────────────────────────────────────────────
 function buildTimeline(allMs){
-  // Projects
+  // ── Project list ────────────────────────────────────────────────────────────
   var PROJ_DEFS=[
     {id:'n',label:'Natura MMBB',color:'#0F6E56'},
     {id:'r',label:'Riachuelo',color:'#534AB7'},
@@ -1392,101 +1375,104 @@ function buildTimeline(allMs){
   });
   var validIds=new Set(PROJ_DEFS.map(function(p){return p.id;}));
 
-  // Data via unified layer
-  var events=getTimelineItems()
-    .filter(function(e){return e.projectId&&validIds.has(e.projectId);})
-    .map(function(e){
-      return{id:e.id,projectId:e.projectId,title:e.title||'',
-        type:e.type,startDate:e.startDate,endDate:e.endDate,
-        done:e.type==='task'?getDone(e.id):false};
-    });
+  // ── Unified data ────────────────────────────────────────────────────────────
+  var all=getTimelineItems().filter(function(e){
+    return e.projectId&&validIds.has(e.projectId);
+  });
 
-  if(!events.length)return'<p class="tl-empty">Nenhum item com data encontrado.</p>';
+  if(!all.length)return'<p class="tl-empty">Nenhum item com data encontrado.</p>';
 
-  // Date window — snapped to month boundaries
-  var allDates=events.reduce(function(acc,e){
+  // ── Date window: snap to full months ────────────────────────────────────────
+  var allDates=all.reduce(function(acc,e){
     acc.push(e.startDate,e.endDate);return acc;
   },[TODAY]);
-  var minD=new Date(Math.min.apply(null,allDates));
-  var maxD=new Date(Math.max.apply(null,allDates));
-  minD=new Date(minD.getFullYear(),minD.getMonth(),1);          // snap to month start
-  maxD=new Date(maxD.getFullYear(),maxD.getMonth()+1,1);        // snap to next month start
+  var rawMin=new Date(Math.min.apply(null,allDates));
+  var rawMax=new Date(Math.max.apply(null,allDates));
+  // Always include today
+  if(TODAY<rawMin)rawMin=new Date(TODAY);
+  if(TODAY>rawMax)rawMax=new Date(TODAY);
+  var minD=new Date(rawMin.getFullYear(),rawMin.getMonth(),1);
+  var maxD=new Date(rawMax.getFullYear(),rawMax.getMonth()+2,0); // end of next month for breathing
   var totalDays=Math.max(1,Math.round((maxD-minD)/86400000));
 
   function pct(d){
     return Math.max(0,Math.min(100,Math.round((d-minD)/86400000)/totalDays*100));
   }
   function pctW(s,e){
-    return Math.max(0.3,Math.max(1,Math.round((e-s)/86400000)+1)/totalDays*100);
+    return Math.max(0.2,Math.max(1,Math.round((e-s)/86400000)+1)/totalDays*100);
   }
 
-  // Month columns
+  // ── Month header ────────────────────────────────────────────────────────────
   var MNAMES=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
   var months='';
   var mc=new Date(minD.getFullYear(),minD.getMonth(),1);
-  while(mc<maxD){
+  while(mc<=maxD){
     var mo=mc.getMonth(),yr=mc.getFullYear();
-    var mNext=new Date(yr,mo+1,1);
-    var mEnd=mNext<maxD?mNext:maxD;
-    months+='<div class="tl-mo" style="width:'+pctW(mc,new Date(mEnd.getTime()-86400000))+'%">'+MNAMES[mo]+'</div>';
-    mc=mNext;
+    var mEnd=new Date(yr,mo+1,0);
+    var visEnd=mEnd>maxD?maxD:mEnd;
+    months+='<div class="tl-mo" style="width:'+pctW(mc,visEnd)+'%">'+MNAMES[mo]+'</div>';
+    mc=new Date(yr,mo+1,1);
   }
 
-  // Today line — rendered inside each lane
+  // ── Today line ──────────────────────────────────────────────────────────────
   var todayPct=pct(TODAY);
-  function makeTodayLine(){
-    return'<div class="tl-today" style="left:'+todayPct+'%">'
-      +'<div class="tl-today-lbl">hoje</div></div>';
-  }
+  var todayLine='<div class="tl-today" style="left:'+todayPct+'%">'
+    +'<div class="tl-today-lbl">hoje</div></div>';
 
-  // Project rows
+  // ── Project rows ─────────────────────────────────────────────────────────────
   var rows=PROJ_DEFS.map(function(proj){
-    var evs=events.filter(function(e){return e.projectId===proj.id;});
+    var evs=all.filter(function(e){return e.projectId===proj.id;});
     if(!evs.length)return'';
 
+    var tasks=evs.filter(function(e){return e.type==='task';});
     var milestones=evs.filter(function(e){return e.type==='milestone';})
       .sort(function(a,b){return a.startDate-b.startDate;});
-    var tasks=evs.filter(function(e){return e.type==='task'&&!e.done;});
 
-    // Task bars — thin, below baseline
-    var taskBars=tasks.map(function(e){
-      return'<div class="tl-bar" style="left:'+pct(e.startDate)+'%;width:'
-        +pctW(e.startDate,e.endDate)+'%;background:'+proj.color+'" title="'+esc(e.title)+'"></div>';
-    }).join('');
+    // ── Single arc bar: span from earliest task start to latest task end ──────
+    var arcBar='';
+    if(tasks.length){
+      var arcStart=new Date(Math.min.apply(null,tasks.map(function(t){return t.startDate;})));
+      var arcEnd=new Date(Math.max.apply(null,tasks.map(function(t){return t.endDate;})));
+      // Don't let arc extend before today for past tasks — clamp to today min
+      // Actually show full arc so user sees the span of work
+      var lp=pct(arcStart);
+      var wp=pctW(arcStart,arcEnd);
+      arcBar='<div class="tl-arc" style="left:'+lp+'%;width:'+wp+'%;background:'+proj.color+'"></div>';
+    }
 
-    // Milestone diamonds — above baseline, label on top
-    // Anti-overlap: track last position, skip label if too close
-    var lastLblPct=-999;
-    var msDivs=milestones.map(function(e){
+    // ── Milestone diamonds ────────────────────────────────────────────────────
+    // Anti-overlap: stagger labels up/down alternately when too close
+    var lastPct=-999;
+    var msDivs=milestones.map(function(e,i){
       var lp=pct(e.startDate);
-      var showLbl=lp-lastLblPct>=14;
-      if(showLbl)lastLblPct=lp;
-      var shortTitle=e.title.length>15?e.title.slice(0,13)+'…':e.title;
-      var lbl=showLbl
-        ?'<div class="tl-ms-lbl" style="color:'+proj.color+';background:'+proj.color+'14">'+esc(shortTitle)+'</div>'
-        :'<div style="height:14px"></div>';
-      return'<div class="tl-ms" style="left:'+lp+'%" title="'+esc(e.title)+'">'+lbl
-        +'<div class="tl-ms-diamond" style="background:'+proj.color+'"></div>'
+      var tooClose=lp-lastPct<12;
+      lastPct=lp;
+      var shortTitle=e.title.length>18?e.title.slice(0,16)+'\u2026':e.title;
+      // Alternate above/below for close milestones to avoid overlap
+      var above=!(tooClose&&i%2===1);
+      var lbl='<div class="tl-ms-lbl '+(above?'tl-ms-lbl-above':'tl-ms-lbl-below')+'" style="color:'+proj.color+'">'
+        +esc(shortTitle)+'</div>';
+      return'<div class="tl-ms '+(above?'tl-ms-above':'tl-ms-below')+'" style="left:'+lp+'%" title="'+esc(e.title)+'">'
+        +(above?lbl:'')
+        +'<div class="tl-ms-diamond" style="background:'+proj.color+';box-shadow:0 0 0 3px '+proj.color+'22"></div>'
+        +(!above?lbl:'')
         +'</div>';
     }).join('');
 
-    var labelHtml='<div class="tl-proj-label">'
-      +'<div class="tl-proj-name">'
+    return'<div class="tl-proj">'
+      +'<div class="tl-proj-label">'
       +'<span class="tl-proj-dot" style="background:'+proj.color+'"></span>'
-      +esc(proj.label)+'</div></div>';
-
-    var laneHtml='<div class="tl-lane">'
+      +esc(proj.label)+'</div>'
+      +'<div class="tl-lane">'
       +'<div class="tl-baseline"></div>'
-      +makeTodayLine()
-      +taskBars+msDivs
+      +todayLine+arcBar+msDivs
+      +'</div>'
       +'</div>';
-
-    return'<div class="tl-proj">'+labelHtml+laneHtml+'</div>';
   }).join('');
 
-  // Legend
+  // ── Legend ──────────────────────────────────────────────────────────────────
   var activeProjs=PROJ_DEFS.filter(function(p){
-    return events.some(function(e){return e.projectId===p.id;});
+    return all.some(function(e){return e.projectId===p.id;});
   });
   var legend='<div class="tl-legend">'
     +activeProjs.map(function(p){
@@ -1494,7 +1480,7 @@ function buildTimeline(allMs){
         +'<div class="tl-li-ms" style="background:'+p.color+'"></div>'
         +esc(p.label)+'</div>';
     }).join('')
-    +'<div class="tl-li"><div class="tl-li-bar" style="background:var(--tx3)"></div>tarefas</div>'
+    +'<div class="tl-li"><div class="tl-li-arc" style="background:var(--tx3)"></div>período de trabalho</div>'
     +'<div class="tl-li"><div class="tl-li-today"></div>hoje</div>'
     +'</div>';
 
@@ -1504,6 +1490,8 @@ function buildTimeline(allMs){
     +rows
     +'</div></div></div>';
 }
+
+
 
 
 
