@@ -1765,15 +1765,29 @@ B.confirmProject=async function(){
   const emoji=emojiEl?emojiEl.dataset.e:'📁';
   const msLabel=(document.getElementById('np-ml')||{value:''}).value.trim();
   const msRaw=(document.getElementById('np-md')||{value:''}).value.trim();
-  let milestoneDate=null;
-  if(msRaw){const pt=msRaw.split('/').map(Number);if(pt.length===2&&pt[0]&&pt[1])milestoneDate=new Date(2026,pt[1]-1,pt[0]).toISOString();}
-  const proj={id:uid(),name,color,emoji,milestoneLabel:msLabel||null,milestoneDate,ts:Date.now()};
+  const projId=uid();
+
+  // Project object — no milestone fields (milestone lives in S.projectMilestones)
+  const proj={id:projId,name,color,emoji,ts:Date.now()};
   if(!Array.isArray(S.customProjects))S.customProjects=[];
   S.customProjects.push(proj);
+
+  // If user filled milestone fields → save to S.projectMilestones[projId]
+  if(msLabel||msRaw){
+    if(!S.projectMilestones)S.projectMilestones={};
+    if(!Array.isArray(S.projectMilestones[projId]))S.projectMilestones[projId]=[];
+    S.projectMilestones[projId].push({
+      id:uid(),
+      label:msLabel||'Milestone inicial',
+      date:msRaw||'a definir',
+      ts:Date.now(),
+    });
+  }
+
   S.updates=S.updates||[];
   S.updates.push({id:uid(),text:'Novo projeto: '+emoji+' '+name,ts:Date.now()});
   B.closeModal();await save('Projeto criado ✓');render();
-  setTimeout(()=>B.sv(proj.id),100);
+  setTimeout(()=>B.sv(projId),100);
 };
 
 B.archiveProject=async function(id){
