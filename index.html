@@ -569,6 +569,21 @@ async function init(){
         S._msInitialized=true;ch=true;
       }
       if(!Array.isArray(S.customProps)){S.customProps=[];ch=true;}
+      // Purge stale milestone-text alerts from S.projectAlerts
+      // (they were copied from old DA defaults and are now shown via buildMsCard instead)
+      if(!S._alertsCleaned){
+        const msPatterns=['Milestone','milestone','17/04','29/04'];
+        ['n','r',...(S.customProjects||[]).map(p=>p.id)].forEach(function(proj){
+          if(Array.isArray((S.projectAlerts||{})[proj])){
+            const before=S.projectAlerts[proj].length;
+            S.projectAlerts[proj]=S.projectAlerts[proj].filter(function(a){
+              return!msPatterns.some(function(p){return(a.text||'').includes(p);});
+            });
+            if(S.projectAlerts[proj].length!==before)ch=true;
+          }
+        });
+        S._alertsCleaned=true;ch=true;
+      }
       if(ch)await setDoc(ref,S);
     }
     sync('live');render();
@@ -959,20 +974,19 @@ function buildPropsCard(props){
 
 // buildAlerts: milestone alerts (auto, read-only) + editable user alerts
 function buildAlerts(proj,allMs){
-  // DA alerts = read-only defaults shown when no user alerts exist
-  const userStored=(S.projectAlerts||{})[proj]||[];
-  const daAlerts=DA[proj]||[];
+  const rawStored=(S.projectAlerts||{})[proj]||[];
+  // Filter out sentinel entries
+  const userStored=rawStored.filter(function(a){return a.id!=='__cleared__';});
+  // If sentinel exists → user explicitly cleared all → show only + alerta
+  const hasSentinel=rawStored.some(function(a){return a.id==='__cleared__';});
+  const source=hasSentinel?[]:userStored.length>0?userStored:(DA[proj]||[]);
 
-  // Read-only DA alerts (only shown when user hasn't created custom alerts)
-  const readonlyRows=userStored.length===0
-    ?daAlerts.map(function(a){
-      return'<div class="alert '+a.type+'"><strong>'+esc(a.text)+'</strong></div>';
-    }).join('')
-    :'';
+  if(!source.length){
+    return'<button class="add-alert" onclick="B.addAlert(\''+proj+'\')">+ alerta</button>';
+  }
 
-  // User-created alerts — identified by id, not index
-  const editableRows=userStored.map(function(a){
-    const aid=a.id||('tmp-'+Math.random());
+  const rows=source.map(function(a){
+    const aid=a.id||('da-'+Math.random().toString(36).slice(2,8));
     return'<div class="alert '+a.type+'">'
       +'<textarea class="alert-inp" rows="1" oninput="ar(this)"'
       +' onblur="B.saveAlertById(\''+proj+'\',\''+aid+'\',this.value)">'
@@ -980,9 +994,7 @@ function buildAlerts(proj,allMs){
       +'<button class="alert-x" onclick="B.delAlertById(\''+proj+'\',\''+aid+'\')">✕</button>'
       +'</div>';
   }).join('');
-
-  return readonlyRows+editableRows
-    +'<button class="add-alert" onclick="B.addAlert(\''+proj+'\')">+ alerta</button>';
+  return rows+'<button class="add-alert" onclick="B.addAlert(\''+proj+'\')">+ alerta</button>';
 }
 
 
@@ -1483,8 +1495,17 @@ B.saveAlertById=async function(proj,aid,val){
 };;
 B.delAlertById=async function(proj,aid){
   if(!S.projectAlerts)S.projectAlerts={};
-  if(!Array.isArray(S.projectAlerts[proj]))S.projectAlerts[proj]=[];
+  // If showing DA defaults, copy them first so we can delete
+  if(!Array.isArray(S.projectAlerts[proj])||S.projectAlerts[proj].length===0){
+    S.projectAlerts[proj]=(DA[proj]||[]).map(function(a){
+      return{id:a.id||uid(),type:a.type,text:a.text};
+    });
+  }
   S.projectAlerts[proj]=S.projectAlerts[proj].filter(function(a){return a.id!==aid;});
+  // Sentinel: if all deleted, store marker so DA doesn't reappear
+  if(S.projectAlerts[proj].length===0){
+    S.projectAlerts[proj]=[{id:'__cleared__',type:'_',text:''}];
+  }
   await save('Alerta removido');render();
 };;
 B.addAlert=async function(proj){
