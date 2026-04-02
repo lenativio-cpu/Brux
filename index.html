@@ -961,18 +961,30 @@ function buildPropsCard(props){
 
 // buildAlerts: milestone alerts (auto, read-only) + editable user alerts
 function buildAlerts(proj,allMs){
-  // Only user-editable alerts (milestones shown via buildMsCard)
-  const stored=(S.projectAlerts||{})[proj];
-  const alerts=stored&&stored.length?stored:(DA[proj]||[]);
-  const rows=alerts.map(function(a,i){
+  // DA alerts = read-only defaults shown when no user alerts exist
+  const userStored=(S.projectAlerts||{})[proj]||[];
+  const daAlerts=DA[proj]||[];
+
+  // Read-only DA alerts (only shown when user hasn't created custom alerts)
+  const readonlyRows=userStored.length===0
+    ?daAlerts.map(function(a){
+      return'<div class="alert '+a.type+'"><strong>'+esc(a.text)+'</strong></div>';
+    }).join('')
+    :'';
+
+  // User-created alerts — identified by id, not index
+  const editableRows=userStored.map(function(a){
+    const aid=a.id||('tmp-'+Math.random());
     return'<div class="alert '+a.type+'">'
       +'<textarea class="alert-inp" rows="1" oninput="ar(this)"'
-      +' onblur="B.saveAlert(\''+proj+'\','+i+',this.value)">'
+      +' onblur="B.saveAlertById(\''+proj+'\',\''+aid+'\',this.value)">'
       +esc(a.text)+'</textarea>'
-      +'<button class="alert-x" onclick="B.delAlert(\''+proj+'\','+i+')">✕</button>'
+      +'<button class="alert-x" onclick="B.delAlertById(\''+proj+'\',\''+aid+'\')">✕</button>'
       +'</div>';
   }).join('');
-  return rows+'<button class="add-alert" onclick="B.addAlert(\''+proj+'\')">+ alerta</button>';
+
+  return readonlyRows+editableRows
+    +'<button class="add-alert" onclick="B.addAlert(\''+proj+'\')">+ alerta</button>';
 }
 
 
@@ -1447,24 +1459,25 @@ B.editCmt=function(taskId,cId){
 };
 
 // ── alerts ────────────────────────────────────────────────────────────────────
-B.saveAlert=async function(proj,idx,val){
+B.saveAlertById=async function(proj,aid,val){
   if(!S.projectAlerts)S.projectAlerts={};
-  if(!S.projectAlerts[proj])S.projectAlerts[proj]=[...(DA[proj]||[])];
-  if(S.projectAlerts[proj][idx])S.projectAlerts[proj][idx].text=val;
+  if(!Array.isArray(S.projectAlerts[proj]))S.projectAlerts[proj]=[];
+  const a=S.projectAlerts[proj].find(function(x){return x.id===aid;});
+  if(a)a.text=val;
   await save('Alerta salvo ✓');
-};
-B.delAlert=async function(proj,idx){
+};;
+B.delAlertById=async function(proj,aid){
   if(!S.projectAlerts)S.projectAlerts={};
-  if(!S.projectAlerts[proj])S.projectAlerts[proj]=[...(DA[proj]||[])];
-  S.projectAlerts[proj].splice(idx,1);
+  if(!Array.isArray(S.projectAlerts[proj]))S.projectAlerts[proj]=[];
+  S.projectAlerts[proj]=S.projectAlerts[proj].filter(function(a){return a.id!==aid;});
   await save('Alerta removido');render();
-};
+};;
 B.addAlert=async function(proj){
   if(!S.projectAlerts)S.projectAlerts={};
-  if(!S.projectAlerts[proj])S.projectAlerts[proj]=[...(DA[proj]||[])];
+  if(!Array.isArray(S.projectAlerts[proj]))S.projectAlerts[proj]=[];
   S.projectAlerts[proj].push({id:uid(),type:'amber',text:'Novo alerta — clique para editar'});
   await save();render();
-};
+};;
 
 // ── proposals ─────────────────────────────────────────────────────────────────
 B.savePropNote=async function(key,val,sid){
